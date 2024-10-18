@@ -44,5 +44,10 @@ preempt=full
    Some of the configuration match CachyOS defaults. I did not prune
    matching entries.
 
-3. `800Hz/2.5ms` and `600Hz/1.6(6)ms` work best on my machine.
+3. This project pulls patch files from the CachyOS and ClearMod GitHub
+   repositories. This may fail in the future when patches no longer align
+   or due to kernel updates. I will deal with it when the time comes.
+   Maybe, I'd include the patches here.
+
+4. `800Hz/2.5ms` and `600Hz/1.6(6)ms` work best on my machine.
 
