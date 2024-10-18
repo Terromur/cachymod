@@ -16,7 +16,7 @@ export _cc_harder=y
 export _tcp_bbr3=y
 
 # Running tick rate
-export _HZ_ticks=800
+export _HZ_ticks=600
 
 # Select tickless
 export _tickrate=full
@@ -41,13 +41,4 @@ export _build_nvidia=y
 
 # Build kernel packages lazy, lazy-headers, and lazy-nvidia
 makepkg -scf --cleanbuild --skipinteg
-
-# Install kernel
-# sudo pacman -U --needed --noconfirm linux-cachyos-gcc-lazy*.zst
-
-# Uninstall kernel
-# sudo pacman -Rsn \
-#   linux-cachyos-gcc-lazy \
-#   linux-cachyos-gcc-lazy-headers \
-#   linux-cachyos-gcc-lazy-nvidia
 
