@@ -36,9 +36,11 @@ export _use_auto_optimization=y
 # Enable LTO
 export _use_llvm_lto=none
 
-# Build the NVIDIA module
-export _build_nvidia=y
+# Never prebuild the NVIDIA modules for custom kernels.
+# Rather, let DKMS handle it for future proof.
+export _build_nvidia=""
+export _build_nvidia_open=""
 
-# Build kernel packages lazy, lazy-headers, and lazy-nvidia
+# Build kernel packages lazy and lazy-headers.
 makepkg -scf --cleanbuild --skipinteg
 
