@@ -198,6 +198,7 @@ source=(
     "auto-cpu-optimization.sh"
     "${_patchsource}/all/0001-cachyos-base-all.patch"
     "0002-change-750hz-to-800hz.patch"
+    "0003-tune-bore-and-migration-cost.patch"
     "0200-clearlinux-extras.patch")
 
 # LLVM makedepends
@@ -276,6 +277,7 @@ source=(
 "https://raw.githubusercontent.com/cachyos/kernel-patches/master/6.11/all/0001-cachyos-base-all.patch"
 "0002-change-750hz-to-800hz.patch"
 "https://raw.githubusercontent.com/cachyos/kernel-patches/master/6.11/sched/0001-bore-cachy-rt.patch"
+"0003-tune-bore-and-migration-cost.patch"
 "https://github.com/marioroy/clearmod/raw/refs/heads/main/patches/sched_eevdf_add_features_comments.patch"
 "https://github.com/marioroy/clearmod/raw/refs/heads/main/patches/sched_eevdf_allow_shorter_slices_to_wakeup-preempt-rt.patch"
 "https://github.com/marioroy/clearmod/raw/refs/heads/main/patches/sched_eevdf_remove_min_vruntime_copy.patch"
