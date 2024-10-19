@@ -2,9 +2,6 @@
 
 Run a 6.11 kernel with lazy preemption capability on [CachyOS](https://cachyos.org/).
 
-Copy the `linux-cachyos-lazy` folder to a work area with ample storage space,
-and change directory. Adjust variables in `PKGBUILD.lazy.sh` (default 600Hz).
-
 If running NVIDIA graphics, first switch to DKMS for future proof CachyOS
 updating the NVIDIA stack to a later release.
 
@@ -20,7 +17,10 @@ sudo pacman -Rsn linux-cachyos-gcc-lazy-nvidia
 sudo pacman -S nvidia-dkms
 ```
 
-Building the kernel and installation.
+## Building and Installation
+
+Copy the `linux-cachyos-lazy` folder to a work area with ample storage space,
+and change directory. Adjust variables in `PKGBUILD.lazy.sh` (default 600Hz).
 
 ```bash
 bash PKGBUILD.lazy.sh
