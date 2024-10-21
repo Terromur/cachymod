@@ -76,10 +76,6 @@ export _processor_opt=""
 # Build Berkeley Packet Filter (BPF) support (default)
 export _nobpf=""
 
-# Enable LTO { full, thin, none }, not yet supported
-# Ah, I need to update PKGBUILD, move things around
-export _use_llvm_lto="none"
-
 # Never prebuild the NVIDIA modules for custom kernels.
 # Rather, let DKMS handle it for future proof.
 # Support removed in PKGBUILD.lazy.
