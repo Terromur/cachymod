@@ -69,15 +69,16 @@ export _use_auto_optimization="y"
 #   sandybridge, ivybridge, haswell, icelake, tigerlake, alderlake }
 export _processor_opt=""
 
-# Enable LTO { full, thin, none }
-export _use_llvm_lto="none"
-
 ############################################################
 # Non-configurable parameters. Do not change.
 ############################################################
 
 # Remove Berkeley Packet Filter (BPF) support
 export _nobpf="y"
+
+# Enable LTO { full, thin, none }, not yet supported
+# Ah, I need to update PKGBUILD, move things around
+export _use_llvm_lto="none"
 
 # Never prebuild the NVIDIA modules for custom kernels.
 # Rather, let DKMS handle it for future proof.
