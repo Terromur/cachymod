@@ -43,7 +43,7 @@ export _tcp_bbr3="y"
 
 # Running tick rate { 1000, 800, 600, 500 }
 # 1000Hz = 2.0ms, 800Hz = 2.5ms, 600Hz = 1.6(6)ms, 500Hz = 2.0ms
-export _HZ_ticks="600"
+export _HZ_ticks="800"
 
 # Select tickless { perodic, idle, full }
 export _tickrate="full"
