@@ -9,22 +9,29 @@ updating the NVIDIA stack to a later release.
 # Obtain a list of NVIDIA kernel modules.
 pacman -Q | awk '/^linux-cachyos-.*nvidia/ { print $1 }'
 
-# Remove the prebuilt NVIDIA kernel modules.
+# Remove any prebuilt NVIDIA kernel modules.
 sudo pacman -Rsn linux-cachyos-nvidia
-sudo pacman -Rsn linux-cachyos-gcc-lazy-nvidia
 
-# Install NVIDIA sources for DKMS.
+# Install NVIDIA sources for DKMS (choose one).
 sudo pacman -S nvidia-dkms
+sudo pacman -S nvidia-open-dkms
 ```
 
 ## Building and Installation
 
 Copy the `linux-cachyos-lazy` folder to a work area with ample storage space,
-and change directory. Adjust variables in `PKGBUILD.lazy.sh` (default 600Hz).
+and change directory. Adjust build options in `PKGBUILD.{lazy,nobpf}.sh`.
+
+The `nobpf` variant is `lazy` with the BPF filter and debugging disabled.
+Note: The `ananicy-cpp` service will not work with this kernel. Stop and
+disable the service before running this flavor.
 
 ```bash
 bash PKGBUILD.lazy.sh
-sudo pacman -U --needed linux-cachyos-gcc-lazy*.zst
+sudo pacman -U linux-cachyos-gcc-lazy*.zst
+
+bash PKGBUILD.nobpf.sh
+sudo pacman -U linux-cachyos-gcc-nobpf*.zst
 ```
 
 Removal is via pacman as well, when no longer needed.
@@ -33,6 +40,10 @@ Removal is via pacman as well, when no longer needed.
 sudo pacman -Rsn \
   linux-cachyos-gcc-lazy \
   linux-cachyos-gcc-lazy-headers
+
+sudo pacman -Rsn \
+  linux-cachyos-gcc-nobpf \
+  linux-cachyos-gcc-nobpf-headers
 ```
 
 Select desired preemption via kernel argument.
@@ -51,7 +62,7 @@ preempt=full
    script creates `PKGBUILD`.
 
 2. The `config.sh` script is where I tried various Clear Linux defaults.
-   Some of the configuration match CachyOS defaults. I did not prune
+   Some of the configuration matches CachyOS defaults. I did not prune
    matching entries.
 
 3. This project pulls patch files from the CachyOS and ClearMod GitHub

@@ -1,7 +1,7 @@
 #!/bin/bash
 # Set extra kernel options.
 
-### Exit immediately if error.
+### Exit immediately on error.
 set -e
 
 ### Set minimal base_slice_ns for BORE.
@@ -9,10 +9,9 @@ set -e
 scripts/config --set-val MIN_BASE_SLICE_NS 1600000
 
 ### Apply various Clear Linux defaults, possibly default in Cachy config.
-### To skip, change boolean from true to false.
+### To skip, change the boolean check from true to false.
 
 if true; then
-
     ### Enable the AMD Address Translation Library.
     ### Enable the Flexible Return and Event Delivery.
     scripts/config -e AMD_ATL
@@ -109,6 +108,63 @@ if true; then
     ### Default to the ORC (Oops Rewind Capability) unwinder. (XanMod default)
     scripts/config -d UNWINDER_FRAME_POINTER
     scripts/config -e UNWINDER_ORC
+fi
 
+### Disable debug. For the "nobpf" variant only.
+
+if [ -n "$_nobpf" ]; then
+    ### Disable kernel tracing infrastructure.
+    ### Disable call depth tracking. (XanMod default)
+    scripts/config -d FTRACE
+    scripts/config -d MITIGATION_CALL_DEPTH_TRACKING
+
+    ### Disable debug.
+    scripts/config -d GDB_SCRIPTS
+    scripts/config -d DEBUG_BUGVERBOSE
+    scripts/config -d DEBUG_INFO
+    scripts/config -d DEBUG_INFO_BTF
+    scripts/config -d DEBUG_INFO_BTF_MODULES
+    scripts/config -d DEBUG_INFO_DWARF_TOOLCHAIN_DEFAULT
+    scripts/config -d DEBUG_INFO_DWARF4
+    scripts/config -d DEBUG_INFO_DWARF5
+    scripts/config -e DEBUG_INFO_NONE
+    scripts/config -d DEBUG_LIST
+    scripts/config -d DEBUG_PREEMPT
+    scripts/config -d PAHOLE_HAS_SPLIT_BTF
+    scripts/config -d SLUB_DEBUG
+    scripts/config -d ACPI_DEBUG
+    scripts/config -d PM_DEBUG
+    scripts/config -d PM_ADVANCED_DEBUG
+    scripts/config -d PM_SLEEP_DEBUG
+    scripts/config -d IRQ_TIME_ACCOUNTING
+    scripts/config -d LATENCYTOP
+    scripts/config -d PERF_EVENTS_AMD_POWER
+    scripts/config -d LOCK_TORTURE_TEST
+    scripts/config -d RCU_TORTURE_TEST
+fi
+
+### Apply ClearMod tuning.
+### To skip, change the boolean check from true to false.
+
+if true; then
+    ### Boot time param "rcutree.enable_rcu_lazy=1"
+    ### can be used to switch RCU_LAZY on.
+    scripts/config -e RCU_EXPERT
+    scripts/config -e RCU_LAZY
+    scripts/config -e RCU_LAZY_DEFAULT_OFF
+    scripts/config --set-val RCU_FANOUT 64
+    scripts/config --set-val RCU_FANOUT_LEAF 16
+    scripts/config -e RCU_BOOST
+    scripts/config --set-val RCU_BOOST_DELAY 500
+    scripts/config -d RCU_CPU_STALL_CPUTIME
+    scripts/config -d RCU_EXP_KTHREAD
+    scripts/config -e RCU_NOCB_CPU
+    scripts/config -e RCU_NOCB_CPU_DEFAULT_ALL
+    scripts/config -d RCU_NOCB_CPU_CB_BOOST
+    scripts/config -d TASKS_TRACE_RCU_READ_MB
+    scripts/config -e RCU_DOUBLE_CHECK_CB_TIME
+    scripts/config -d RT_GROUP_SCHED
+    scripts/config -e SCHED_OMIT_FRAME_POINTER
+    scripts/config -d SCHED_CLUSTER
 fi
 

@@ -5,7 +5,7 @@
 set -e
 
 ############################################################
-# Build options for the lazy variant.
+# Build options for the nobpf variant.
 ############################################################
 
 # Enable CachyOS config
@@ -76,8 +76,8 @@ export _use_llvm_lto="none"
 # Non-configurable parameters. Do not change.
 ############################################################
 
-# Build Berkeley Packet Filter (BPF) support (default)
-export _nobpf=""
+# Remove Berkeley Packet Filter (BPF) support
+export _nobpf="y"
 
 # Never prebuild the NVIDIA modules for custom kernels.
 # Rather, let DKMS handle it for future proof.
@@ -85,9 +85,12 @@ export _nobpf=""
 export _build_nvidia=""
 export _build_nvidia_open=""
 
+# Debug is disabled explicitly for the nobpf variant.
+export _build_debug=""
+
 # Overwrite PKGBUILD if it exists
 cp PKGBUILD.lazy PKGBUILD
 
-# Build kernel lazy and lazy-headers packages
+# Build kernel nobpf and nobpf-headers packages
 makepkg -scf --cleanbuild --skipinteg
 
