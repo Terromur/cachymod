@@ -110,43 +110,13 @@ if true; then
     scripts/config -e UNWINDER_ORC
 fi
 
-### Disable debug. For the "nobpf" variant only.
-
-if [ -n "$_nobpf" ]; then
-    ### Disable kernel tracing infrastructure.
-    ### Disable call depth tracking. (XanMod default)
-    scripts/config -d FTRACE
-    scripts/config -d MITIGATION_CALL_DEPTH_TRACKING
-
-    ### Disable debug.
-    scripts/config -d GDB_SCRIPTS
-    scripts/config -d DEBUG_BUGVERBOSE
-    scripts/config -d DEBUG_INFO
-    scripts/config -d DEBUG_INFO_BTF
-    scripts/config -d DEBUG_INFO_BTF_MODULES
-    scripts/config -d DEBUG_INFO_DWARF_TOOLCHAIN_DEFAULT
-    scripts/config -d DEBUG_INFO_DWARF4
-    scripts/config -d DEBUG_INFO_DWARF5
-    scripts/config -e DEBUG_INFO_NONE
-    scripts/config -d DEBUG_LIST
-    scripts/config -d DEBUG_PREEMPT
-    scripts/config -d PAHOLE_HAS_SPLIT_BTF
-    scripts/config -d SLUB_DEBUG
-    scripts/config -d ACPI_DEBUG
-    scripts/config -d PM_DEBUG
-    scripts/config -d PM_ADVANCED_DEBUG
-    scripts/config -d PM_SLEEP_DEBUG
-    scripts/config -d IRQ_TIME_ACCOUNTING
-    scripts/config -d LATENCYTOP
-    scripts/config -d PERF_EVENTS_AMD_POWER
-    scripts/config -d LOCK_TORTURE_TEST
-    scripts/config -d RCU_TORTURE_TEST
-fi
-
 ### Apply ClearMod tuning.
 ### To skip, change the boolean check from true to false.
 
 if true; then
+    ### Disable call depth tracking. (XanMod default)
+    scripts/config -d MITIGATION_CALL_DEPTH_TRACKING
+
     ### Boot time param "rcutree.enable_rcu_lazy=1"
     ### can be used to switch RCU_LAZY on.
     scripts/config -e RCU_EXPERT

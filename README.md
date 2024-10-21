@@ -11,6 +11,7 @@ pacman -Q | awk '/^linux-cachyos-.*nvidia/ { print $1 }'
 
 # Remove any prebuilt NVIDIA kernel modules.
 sudo pacman -Rsn linux-cachyos-nvidia
+sudo pacman -Rsn linux-cachyos-nvidia-open
 
 # Install NVIDIA sources for DKMS (choose one).
 sudo pacman -S nvidia-dkms
@@ -20,18 +21,11 @@ sudo pacman -S nvidia-open-dkms
 ## Building and Installation
 
 Copy the `linux-cachyos-lazy` folder to a work area with ample storage space,
-and change directory. Adjust build options in `PKGBUILD.{lazy,nobpf}.sh`.
-
-The `nobpf` variant is `lazy` with the BPF filter and debugging disabled.
-Note: The `ananicy-cpp` service will not work with this kernel. Stop and
-disable the service before running this flavor.
+and change directory. Adjust build options in `PKGBUILD.lazy.sh`.
 
 ```bash
 bash PKGBUILD.lazy.sh
 sudo pacman -U linux-cachyos-gcc-lazy*.zst
-
-bash PKGBUILD.nobpf.sh
-sudo pacman -U linux-cachyos-gcc-nobpf*.zst
 ```
 
 Removal is via pacman as well, when no longer needed.
@@ -40,10 +34,6 @@ Removal is via pacman as well, when no longer needed.
 sudo pacman -Rsn \
   linux-cachyos-gcc-lazy \
   linux-cachyos-gcc-lazy-headers
-
-sudo pacman -Rsn \
-  linux-cachyos-gcc-nobpf \
-  linux-cachyos-gcc-nobpf-headers
 ```
 
 Select desired preemption via kernel argument.

@@ -117,11 +117,7 @@ fi
 
 pkgbase="linux-$_pkgsuffix"
 
-if [ -z "$_nobpf" ]; then
-    pkgbase="$pkgbase-lazy"
-else
-    pkgbase="$pkgbase-nobpf"
-fi
+pkgbase="$pkgbase-lazy"
 _major=6.11
 _minor=4
 #_minorc=$((_minor+1))
@@ -209,11 +205,6 @@ prepare() {
 
     echo "Setting config..."
     cp ../config .config
-
-    ### Remove bpf support
-    if [ -n "$_nobpf" ]; then
-        scripts/config --set-str LSM "landlock,lockdown,yama,integrity"
-    fi
 
     ### Select CPU optimization (default Generic)
     if [ -n "$_processor_opt" ]; then
@@ -430,9 +421,7 @@ prepare() {
 build() {
     cd "$_srcname"
     make "${BUILD_FLAGS[@]}" -j"$(nproc)" all
-    if [ -z "$_nobpf" ]; then
-        make -C tools/bpf/bpftool vmlinux.h feature-clang-bpf-co-re=1
-    fi
+    make -C tools/bpf/bpftool vmlinux.h feature-clang-bpf-co-re=1
 
     local MODULE_FLAGS=(
        KERNEL_UNAME="${_kernuname}"
@@ -495,10 +484,7 @@ _package-headers() {
 
     echo "Installing build files..."
     install -Dt "$builddir" -m644 .config Makefile Module.symvers System.map \
-        localversion.* version vmlinux
-    if [ -z "$_nobpf" ]; then
-        install -Dt "$builddir" -m644 tools/bpf/bpftool/vmlinux.h
-    fi
+        localversion.* version vmlinux tools/bpf/bpftool/vmlinux.h
     install -Dt "$builddir/kernel" -m644 kernel/Makefile
     install -Dt "$builddir/arch/x86" -m644 arch/x86/Makefile
     cp -t "$builddir" -a scripts
@@ -508,8 +494,7 @@ _package-headers() {
     install -Dt "$builddir/tools/objtool" tools/objtool/objtool
 
     # required when DEBUG_INFO_BTF_MODULES is enabled
-    # the nobpf variant disables debug
-    if [[ -z "$_nobpf" && -f tools/bpf/resolve_btfids/resolve_btfids ]]; then
+    if [ -f tools/bpf/resolve_btfids/resolve_btfids ]; then
         install -Dt "$builddir/tools/bpf/resolve_btfids" tools/bpf/resolve_btfids/resolve_btfids
     fi
 
