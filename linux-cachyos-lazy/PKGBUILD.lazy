@@ -175,14 +175,27 @@ makedepends=(
 )
 
 _patchsource="https://raw.githubusercontent.com/cachyos/kernel-patches/master/${_major}"
+
 source=(
     "https://cdn.kernel.org/pub/linux/kernel/v${pkgver%%.*}.x/${_srcname}.tar.xz"
     "config"
     "config.sh"
     "auto-cpu-optimization.sh"
+    "https://github.com/marioroy/clearmod/raw/refs/heads/main/patches/0001-linux6.11.2-rt7.patch"
+    "https://github.com/marioroy/clearmod/raw/refs/heads/main/patches/0001-linux6.11.2-rt7-update1.patch"
     "0001-cachyos-base-all.patch"
     "0002-change-750hz-to-800hz.patch"
+    "https://raw.githubusercontent.com/cachyos/kernel-patches/master/6.11/sched/0001-bore-cachy-rt.patch"
     "0003-tune-bore-and-migration-cost.patch"
+    "https://github.com/marioroy/clearmod/raw/refs/heads/main/patches/sched_eevdf_add_features_comments.patch"
+    "https://github.com/marioroy/clearmod/raw/refs/heads/main/patches/sched_eevdf_allow_shorter_slices_to_wakeup-preempt-rt.patch"
+    "https://github.com/marioroy/clearmod/raw/refs/heads/main/patches/sched_eevdf_remove_min_vruntime_copy.patch"
+    "https://github.com/marioroy/clearmod/raw/refs/heads/main/patches/sched_fair_cleanup_pick_task_fair_vs_throttle.patch"
+    "https://github.com/marioroy/clearmod/raw/refs/heads/main/patches/sched_fair_unify_pick_next_task_fair.patch"
+    "https://github.com/marioroy/clearmod/raw/refs/heads/main/patches/sched_fair_remove_the_DOUBLE_TICK_feature.patch"
+    "https://github.com/marioroy/clearmod/raw/refs/heads/main/patches/0001-linux6.11.2-rt7-update2.patch"
+    "https://github.com/marioroy/clearmod/raw/refs/heads/main/patches/0001-linux6.11.2-rt7-update3.patch"
+    "https://github.com/marioroy/clearmod/raw/refs/heads/main/patches/sched_deadline_use_hrtick_enabled_dl.patch"
     "0200-clearlinux-extras.patch"
     "0300-pollrate.patch")
 
@@ -209,28 +222,6 @@ export KBUILD_BUILD_USER="$pkgbase"
 export KBUILD_BUILD_TIMESTAMP="$(date -Ru${SOURCE_DATE_EPOCH:+d @$SOURCE_DATE_EPOCH})"
 
 _die() { error "$@" ; exit 1; }
-source=(
-"https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.11.4.tar.xz"
-"config"
-"config.sh"
-"auto-cpu-optimization.sh"
-"https://github.com/marioroy/clearmod/raw/refs/heads/main/patches/0001-linux6.11.2-rt7.patch"
-"https://github.com/marioroy/clearmod/raw/refs/heads/main/patches/0001-linux6.11.2-rt7-update1.patch"
-"0001-cachyos-base-all.patch"
-"0002-change-750hz-to-800hz.patch"
-"https://raw.githubusercontent.com/cachyos/kernel-patches/master/6.11/sched/0001-bore-cachy-rt.patch"
-"0003-tune-bore-and-migration-cost.patch"
-"https://github.com/marioroy/clearmod/raw/refs/heads/main/patches/sched_eevdf_add_features_comments.patch"
-"https://github.com/marioroy/clearmod/raw/refs/heads/main/patches/sched_eevdf_allow_shorter_slices_to_wakeup-preempt-rt.patch"
-"https://github.com/marioroy/clearmod/raw/refs/heads/main/patches/sched_eevdf_remove_min_vruntime_copy.patch"
-"https://github.com/marioroy/clearmod/raw/refs/heads/main/patches/sched_fair_cleanup_pick_task_fair_vs_throttle.patch"
-"https://github.com/marioroy/clearmod/raw/refs/heads/main/patches/sched_fair_unify_pick_next_task_fair.patch"
-"https://github.com/marioroy/clearmod/raw/refs/heads/main/patches/sched_fair_remove_the_DOUBLE_TICK_feature.patch"
-"https://github.com/marioroy/clearmod/raw/refs/heads/main/patches/0001-linux6.11.2-rt7-update2.patch"
-"https://github.com/marioroy/clearmod/raw/refs/heads/main/patches/0001-linux6.11.2-rt7-update3.patch"
-"https://github.com/marioroy/clearmod/raw/refs/heads/main/patches/sched_deadline_use_hrtick_enabled_dl.patch"
-"0200-clearlinux-extras.patch"
-"0300-pollrate.patch")
 
 prepare() {
     cd "$_srcname"
