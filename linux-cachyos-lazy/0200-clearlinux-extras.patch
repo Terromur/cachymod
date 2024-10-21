@@ -22,21 +22,6 @@
 # Patch0167: 0167-net-sock-increase-default-number-of-_SK_MEM_PACKETS-.patch
 ##
 
-# -march=x86-64-v3 will be appended (default) or auto-cpu-optimization.sh
-
-diff -uarp a/arch/x86/Makefile b/arch/x86/Makefile
---- a/arch/x86/Makefile
-+++ b/arch/x86/Makefile
-@@ -70,7 +70,7 @@ export BITS
- #
- #    https://gcc.gnu.org/bugzilla/show_bug.cgi?id=53383
- #
--KBUILD_CFLAGS += -mno-sse -mno-mmx -mno-sse2 -mno-3dnow -mno-avx -mno-avx2 -mno-avx512f -fno-tree-vectorize
-+KBUILD_CFLAGS += -mno-sse -mno-mmx -mno-sse2 -mno-3dnow -mno-avx -mno-avx2 -mno-avx512f -fno-tree-vectorize -O3 -march=westmere -mpopcnt -fivopts -fmodulo-sched
- KBUILD_RUSTFLAGS += --target=$(objtree)/scripts/target.json
- KBUILD_RUSTFLAGS += -Ctarget-feature=-sse,-sse2,-sse3,-ssse3,-sse4.1,-sse4.2,-avx,-avx2,-avx512f
- 
-
 # Patch0102: 0102-increase-the-ext4-default-commit-age.patch
 
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
