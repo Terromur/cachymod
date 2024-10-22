@@ -69,6 +69,17 @@ export _use_auto_optimization="y"
 #   sandybridge, ivybridge, haswell, icelake, tigerlake, alderlake }
 export _processor_opt=""
 
+# Add extra sources here: opt-in/uncomment for the USB pollrate patch
+#export _extra_patch_or_url1="0300-pollrate.patch"
+#export _extra_patch_or_url2=""
+#export _extra_patch_or_url3=""
+#export _extra_patch_or_url4=""
+#export _extra_patch_or_url5=""
+#export _extra_patch_or_url6=""
+#export _extra_patch_or_url7=""
+#export _extra_patch_or_url8=""
+#export _extra_patch_or_url9=""
+
 ############################################################
 # Non-configurable parameters. Do not change.
 ############################################################
