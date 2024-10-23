@@ -22,6 +22,7 @@ sudo pacman -S nvidia-open-dkms
 
 Copy the `linux-cachyos-lazy` folder to a work area with ample storage space,
 and change directory. Adjust build options in `PKGBUILD.lazy.sh`.
+Select `_preempt=realtime` for the realtime kernel.
 
 ```bash
 bash PKGBUILD.lazy.sh
