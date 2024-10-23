@@ -64,9 +64,9 @@ export _hugepage="always"
 export _use_auto_optimization="y"
 
 # Select CPU compiler optimization (overrides _use_auto_optimization)
-# { native_amd, native_intel, zen, zen2, zen3, zen4,
-#   generic, generic_v1, generic_v2, generic_v3, generic_v4,
-#   sandybridge, ivybridge, haswell, icelake, tigerlake, alderlake }
+# { native_amd, native_intel, zen, zen2, zen3, zen4, generic,
+#   generic_v1, generic_v2, generic_v3, generic_v4, sandybridge,
+#   ivybridge, haswell, skylake, icelake, tigerlake, alderlake }
 export _processor_opt=""
 
 # Add extra sources here: opt-in/uncomment for the USB pollrate patch
@@ -83,9 +83,6 @@ export _processor_opt=""
 ############################################################
 # Non-configurable parameters. Do not change.
 ############################################################
-
-# Build Berkeley Packet Filter (BPF) support (default)
-export _nobpf=""
 
 # Never prebuild the NVIDIA modules for custom kernels.
 # Rather, let DKMS handle it for future proof.

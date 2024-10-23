@@ -513,7 +513,7 @@ _package() {
         "${pkgdir}/etc/mkinitcpio.d/linux-cachyos-gcc-${flavour}.preset"
 
     echo "Installing modules..."
-    ZSTD_CLEVEL=19 make INSTALL_MOD_PATH="$pkgdir/usr" INSTALL_MOD_STRIP=1 \
+    ZSTD_CLEVEL=6 make INSTALL_MOD_PATH="$pkgdir/usr" INSTALL_MOD_STRIP=1 \
         DEPMOD=/doesnt/exist  modules_install  # Suppress depmod
 
     # remove build links
@@ -626,7 +626,7 @@ _package-zfs(){
     cd "${srcdir}/zfs"
     install -dm755 "${modulesdir}"
     install -m644 module/*.ko "${modulesdir}"
-    find "$pkgdir" -name '*.ko' -exec zstd --rm -19 {} +
+    find "$pkgdir" -name '*.ko' -exec zstd --rm -6 {} +
     #  sed -i -e "s/EXTRAMODULES='.*'/EXTRAMODULES='${pkgver}-${pkgbase}'/" "$startdir/zfs.install"
 }
 

@@ -11,7 +11,29 @@ scripts/config --set-val MIN_BASE_SLICE_NS 1600000
 ### Answer unconfigured (NEW) kernel options in the CachyOS config.
 scripts/config -d DRM_MGAG200_DISABLE_WRITECOMBINE
 scripts/config -d INTEL_TDX_HOST
-scripts/config -m REGULATOR_DA903X
+scripts/config -d REGULATOR_DA903X
+scripts/config -d GPIO_BT8XX
+scripts/config -d SND_SE6X
+
+### Disable the BPF (Berkeley Packet Filter).
+scripts/config --set-str LSM "landlock,lockdown,yama,integrity"
+
+### Disable tracers.
+scripts/config -d TASKS_RUDE_RCU
+scripts/config -d FUNCTION_PROFILER
+scripts/config -d ATH5K_TRACER
+scripts/config -d CONTEXT_SWITCH_TRACER
+scripts/config -d FUNCTION_TRACER
+scripts/config -d HWLAT_TRACER
+scripts/config -d IRQSOFF_TRACER
+scripts/config -d MMIOTRACE
+scripts/config -d OSNOISE_TRACER
+scripts/config -d PM_TRACE_RTC
+scripts/config -d PREEMPT_TRACER
+scripts/config -d RCU_TRACE
+scripts/config -d SCHED_TRACER
+scripts/config -d STACK_TRACER
+scripts/config -d TIMERLAT_TRACER
 
 ### Apply various Clear Linux defaults, possibly default in Cachy config.
 ### To skip, change the boolean check from true to false.
