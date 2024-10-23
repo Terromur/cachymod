@@ -9,6 +9,7 @@ set -e
 scripts/config --set-val MIN_BASE_SLICE_NS 1600000
 
 ### Answer unconfigured (NEW) kernel options in the CachyOS config.
+scripts/config -d DRM_MGAG200_DISABLE_WRITECOMBINE
 scripts/config -d INTEL_TDX_HOST
 scripts/config -m REGULATOR_DA903X
 

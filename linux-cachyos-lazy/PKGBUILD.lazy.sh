@@ -48,7 +48,7 @@ export _HZ_ticks="800"
 # Select tickless { perodic, idle, full }
 export _tickrate="full"
 
-# Select preempt { server, voluntary, full, lazy, laziest }
+# Select preempt { server, voluntary, full, lazy, laziest, realtime }
 export _preempt="lazy"
 
 # Set NR_CPUS, leave at 512 for better performance

@@ -31,18 +31,30 @@ sudo pacman -U linux-cachyos-gcc-lazy*.zst
 Removal is via pacman as well, when no longer needed.
 
 ```text
+# lazy
 sudo pacman -Rsn \
   linux-cachyos-gcc-lazy \
   linux-cachyos-gcc-lazy-headers
+
+# lazy-rt
+sudo pacman -Rsn \
+  linux-cachyos-gcc-lazy-rt \
+  linux-cachyos-gcc-lazy-rt-headers
 ```
 
-Select desired preemption via kernel argument.
+Optionally, select desired preemption via kernel argument.
 
 ```bash
-preempt=none
-preempt=laziest
-preempt=lazy (default)
+# lazy
 preempt=full
+preempt=lazy (default)
+preempt=laziest
+preempt=none
+
+# lazy-rt
+preempt=full (default)
+preempt=lazy
+preempt=laziest
 ```
 
 ## Developer Notes
@@ -60,4 +72,8 @@ preempt=full
    or due to kernel updates. Maybe, I'd include the patches here.
 
 4. `800Hz/2.5ms` and `600Hz/1.6(6)ms` work best on my machine.
+
+5. Failed to commit transaction (conflicting files). Initally, the package
+   did not own the `/etc/mkinitcpio.d/linux-cachyos-gcc-lazy*.preset` file.
+   Remove the file manually and try again.
 

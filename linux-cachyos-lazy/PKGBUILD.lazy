@@ -73,7 +73,7 @@ _HZ_ticks=${_HZ_ticks-800}
 ### Full tickless can give higher performances in various cases but, depending on hardware, lower consistency.
 _tickrate=${_tickrate-full}
 
-## Choose between full(low-latency), lazy, laziest, voluntary or server
+## Choose between realtime(rt), full(low-latency), lazy, laziest, voluntary or server
 _preempt=${_preempt-lazy}
 
 ### Transparent Hugepages
@@ -101,7 +101,7 @@ _use_auto_optimization=${_use_auto_optimization-y}
 # Enabled by default to show the difference between LTO kernels and GCC kernels
 _use_gcc_suffix=${_use_gcc_suffix-y}
 
-# Build the zfs module in to the kernel
+# Build the zfs module into the kernel
 # WARNING: The ZFS module doesn't build with selected RT sched due to licensing issues.
 # If you use ZFS, refrain from building the RT kernel
 _build_zfs=${_build_zfs-}
@@ -117,7 +117,11 @@ fi
 
 pkgbase="linux-$_pkgsuffix"
 
-pkgbase="$pkgbase-lazy"
+if [ "$_preempt" = "realtime" ]; then
+    pkgbase="$pkgbase-lazy-rt"
+else
+    pkgbase="$pkgbase-lazy"
+fi
 _major=6.11
 _minor=5
 #_minorc=$((_minor+1))
@@ -156,6 +160,7 @@ source=(
     "config"
     "config.sh"
     "auto-cpu-optimization.sh"
+    "mkinitcpio.template"
     "https://github.com/marioroy/clearmod/raw/refs/heads/main/patches/0001-linux6.11.2-rt7.patch"
     "https://github.com/marioroy/clearmod/raw/refs/heads/main/patches/0001-linux6.11.2-rt7-update1.patch"
     "0001-cachyos-base-all.patch"
@@ -171,6 +176,7 @@ source=(
     "https://github.com/marioroy/clearmod/raw/refs/heads/main/patches/0001-linux6.11.2-rt7-update2.patch"
     "https://github.com/marioroy/clearmod/raw/refs/heads/main/patches/0001-linux6.11.2-rt7-update3.patch"
     "https://github.com/marioroy/clearmod/raw/refs/heads/main/patches/sched_deadline_use_hrtick_enabled_dl.patch"
+    "0100-mm-kconfig-enable-rt-thp.patch"
     "0200-clearlinux-extras.patch")
 
 # Append extra sources in PKGBUILD.lazy.sh
@@ -183,6 +189,11 @@ source=(
 [ -n "$_extra_patch_or_url7" ] && source+=("$_extra_patch_or_url7")
 [ -n "$_extra_patch_or_url8" ] && source+=("$_extra_patch_or_url8")
 [ -n "$_extra_patch_or_url9" ] && source+=("$_extra_patch_or_url9")
+
+# WARNING The ZFS module doesn't build with selected RT sched due to licensing issues.
+if [ "$_preempt" = "realtime" ]; then
+    unset _build_zfs
+fi
 
 # ZFS support
 if [ -n "$_build_zfs" ]; then
@@ -310,12 +321,27 @@ prepare() {
     [ -z "$_preempt" ] && _die "The value is empty. Choose the correct one again."
 
     case "$_preempt" in
-        lazy) scripts/config -e PREEMPT_BUILD -d PREEMPT_NONE -d PREEMPT_VOLUNTARY -d PREEMPT -e PREEMPT_LAZY -d PREEMPT_LAZIEST -e PREEMPT_COUNT -e PREEMPTION -e PREEMPT_DYNAMIC;;
-        laziest) scripts/config -e PREEMPT_BUILD -d PREEMPT_NONE -d PREEMPT_VOLUNTARY -d PREEMPT -d PREEMPT_LAZY -e PREEMPT_LAZIEST -e PREEMPT_COUNT -e PREEMPTION -e PREEMPT_DYNAMIC;;
-        full) scripts/config -e PREEMPT_BUILD -d PREEMPT_NONE -d PREEMPT_VOLUNTARY -e PREEMPT -d PREEMPT_LAZY -d PREEMPT_LAZIEST -e PREEMPT_COUNT -e PREEMPTION -e PREEMPT_DYNAMIC;;
-        voluntary) scripts/config -e PREEMPT_BUILD -d PREEMPT_NONE -e PREEMPT_VOLUNTARY -d PREEMPT -d PREEMPT_LAZY -d PREEMPT_LAZIEST -e PREEMPT_COUNT -e PREEMPTION -d PREEMPT_DYNAMIC;;
-        server) scripts/config -e PREEMPT_NONE_BUILD -e PREEMPT_NONE -d PREEMPT_VOLUNTARY -d PREEMPT -d PREEMPT_LAZY -d PREEMPT_LAZIEST -d PREEMPTION -d PREEMPT_DYNAMIC;;
-        *) _die "The value '$_preempt' is invalid. Choose the correct one again.";;
+        realtime)
+            scripts/config -e PREEMPT_BUILD -d PREEMPT_NONE -d PREEMPT_VOLUNTARY -e PREEMPT -d PREEMPT_LAZY -d PREEMPT_LAZIEST -e PREEMPT_COUNT -e PREEMPTION -e PREEMPT_DYNAMIC -e PREEMPT_RT
+            ;;
+        laziest)
+            scripts/config -e PREEMPT_BUILD -d PREEMPT_NONE -d PREEMPT_VOLUNTARY -d PREEMPT -d PREEMPT_LAZY -e PREEMPT_LAZIEST -e PREEMPT_COUNT -e PREEMPTION -e PREEMPT_DYNAMIC -d PREEMPT_RT
+            ;;
+        lazy)
+            scripts/config -e PREEMPT_BUILD -d PREEMPT_NONE -d PREEMPT_VOLUNTARY -d PREEMPT -e PREEMPT_LAZY -d PREEMPT_LAZIEST -e PREEMPT_COUNT -e PREEMPTION -e PREEMPT_DYNAMIC -d PREEMPT_RT
+            ;;
+        full)
+            scripts/config -e PREEMPT_BUILD -d PREEMPT_NONE -d PREEMPT_VOLUNTARY -e PREEMPT -d PREEMPT_LAZY -d PREEMPT_LAZIEST -e PREEMPT_COUNT -e PREEMPTION -e PREEMPT_DYNAMIC -d PREEMPT_RT
+            ;;
+        voluntary)
+            scripts/config -e PREEMPT_BUILD -d PREEMPT_NONE -e PREEMPT_VOLUNTARY -d PREEMPT -d PREEMPT_LAZY -d PREEMPT_LAZIEST -e PREEMPT_COUNT -e PREEMPTION -d PREEMPT_DYNAMIC -d PREEMPT_RT
+            ;;
+        server)
+            scripts/config -e PREEMPT_NONE_BUILD -e PREEMPT_NONE -d PREEMPT_VOLUNTARY -d PREEMPT -d PREEMPT_LAZY -d PREEMPT_LAZIEST -d PREEMPTION -d PREEMPT_DYNAMIC -d PREEMPT_RT
+            ;;
+        *)
+            _die "The value '$_preempt' is invalid. Choose the correct one again."
+            ;;
     esac
 
     echo "Selecting '$_preempt' preempt type..."
@@ -468,6 +494,7 @@ _package() {
     cd "$_srcname"
 
     local modulesdir="$pkgdir/usr/lib/modules/$(<version)"
+    local flavour
 
     echo "Installing boot image..."
     # systemd expects to find the kernel here to allow hibernation
@@ -476,6 +503,14 @@ _package() {
 
     # Used by mkinitcpio to name the kernel
     echo "$pkgbase" | install -Dm644 /dev/stdin "$modulesdir/pkgbase"
+
+    # Include mkinitcpio preset file, excluding PRESETS 'fallback'
+    [ "$_preempt" = "realtime" ] && flavour="lazy-rt" || flavour="lazy"
+
+    install -Dm644 "${srcdir}/mkinitcpio.template" \
+        "${pkgdir}/etc/mkinitcpio.d/linux-cachyos-gcc-${flavour}.preset"
+    sed -i "s/__FLAVOUR__/${flavour}/" \
+        "${pkgdir}/etc/mkinitcpio.d/linux-cachyos-gcc-${flavour}.preset"
 
     echo "Installing modules..."
     ZSTD_CLEVEL=19 make INSTALL_MOD_PATH="$pkgdir/usr" INSTALL_MOD_STRIP=1 \
