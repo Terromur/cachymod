@@ -18,7 +18,6 @@
 # Patch0148: 0002-sched-core-add-some-branch-hints-based-on-gcov-analy.patch
 # Patch0157: scale-net-alloc.patch
 # Patch0158: 0158-clocksource-only-perform-extended-clocksource-checks.patch
-# Patch0160: better_idle_balance.patch
 # Patch0165: slack.patch
 # Patch0167: 0167-net-sock-increase-default-number-of-_SK_MEM_PACKETS-.patch
 ##
@@ -436,20 +435,6 @@ index 82338773602c..d84f0e29452e 100644
  		for (i = 0; i < ACPI_PM_READ_CHECKS; i++) {
 -- 
 2.40.1
-
-# Patch0160: better_idle_balance.patch
-
---- linux-6.3.1/kernel/sched/fair.c~	2023-04-30 23:32:26.000000000 +0000
-+++ linux-6.3.1/kernel/sched/fair.c	2023-06-27 15:01:52.301844933 +0000
-@@ -11745,7 +11745,7 @@
- 
- 		update_next_balance(sd, &next_balance);
- 
--		if (this_rq->avg_idle < curr_cost + sd->max_newidle_lb_cost)
-+		if (this_rq->avg_idle/2 < curr_cost + sd->max_newidle_lb_cost)
- 			break;
- 
- 		if (sd->flags & SD_BALANCE_NEWIDLE) {
 
 # Patch0165: slack.patch
 
