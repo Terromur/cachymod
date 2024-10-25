@@ -94,5 +94,5 @@ export _build_nvidia_open=""
 cp PKGBUILD.lazy PKGBUILD
 
 # Build kernel lazy and lazy-headers packages
-nice -n 12 makepkg -scf --cleanbuild --skipinteg
+nice -n 6 makepkg -scf --cleanbuild --skipinteg
 
