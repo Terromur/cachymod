@@ -172,6 +172,7 @@ source=(
     "https://github.com/marioroy/clearmod/raw/refs/heads/main/patches/sched_fair_remove_the_DOUBLE_TICK_feature.patch"
     "https://github.com/marioroy/clearmod/raw/refs/heads/main/patches/0001-linux6.11.2-rt7-update2.patch"
     "https://github.com/marioroy/clearmod/raw/refs/heads/main/patches/0001-linux6.11.2-rt7-update3.patch"
+    "https://github.com/marioroy/clearmod/raw/refs/heads/main/patches/0001-linux6.11.2-rt7-update4.patch"
     "https://github.com/marioroy/clearmod/raw/refs/heads/main/patches/sched_deadline_use_hrtick_enabled_dl.patch"
     "0100-mm-kconfig-enable-rt-thp.patch"
     "0200-clearlinux-extras.patch")
