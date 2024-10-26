@@ -2,6 +2,7 @@
 # Obey RUN_TO_PARITY instead, for better throughput.
 
 # Increase sched migration cost.
+# Migration cost kept at 500000, 2024-10-26.
 
 diff -uarp a/kernel/sched/bore.c b/kernel/sched/bore.c
 --- a/kernel/sched/bore.c
@@ -23,7 +24,7 @@ diff -uarp a/kernel/sched/fair.c b/kernel/sched/fair.c
  #endif // CONFIG_SCHED_BORE
  
 -const_debug unsigned int sysctl_sched_migration_cost	= 500000UL;
-+const_debug unsigned int sysctl_sched_migration_cost	= 600000UL;
++const_debug unsigned int sysctl_sched_migration_cost	= 500000UL;
  
  static int __init setup_sched_thermal_decay_shift(char *str)
  {
