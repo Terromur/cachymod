@@ -60,21 +60,17 @@ preempt=laziest
 
 ## Developer Notes
 
-1. The `PKGBUILD.cachyos` is not used and left here for comparison.
+1. The `PKGBUILD.cachyos` is not used and left it here for comparison.
    I modified the file and saved to `PKGBUILD.lazy`. The `*.lazy.sh`
    script creates `PKGBUILD`.
 
-2. The `config.sh` script is where I tried various Clear Linux defaults.
-   Some of the configuration matches CachyOS defaults. I did not prune
-   matching entries.
-
-3. This project pulls patch files from the CachyOS and ClearMod GitHub
+2. This project pulls patch files from the CachyOS and ClearMod GitHub
    repositories. This may fail in the future when patches no longer align
    or due to kernel updates. Maybe, I'd include the patches here.
 
-4. `800Hz/2.5ms` and `600Hz/1.6(6)ms` work best on my machine.
+3. `800Hz/2.5ms` and `600Hz/1.6(6)ms` work best on my machine.
 
-5. Failed to commit transaction (conflicting files). Initally, the package
+4. Failed to commit transaction (conflicting files). Initally, the package
    did not own the `/etc/mkinitcpio.d/linux-cachyos-gcc-lazy*.preset` file.
    Remove the file manually and try again.
 
