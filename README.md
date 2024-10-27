@@ -44,11 +44,12 @@ sudo pacman -Rsn \
 ```
 
 Optionally, select desired preemption via kernel argument.
+For most cases "full" is what you want for low-latency.
 
 ```bash
 # lazy
-preempt=full
-preempt=lazy (default)
+preempt=full (default)
+preempt=lazy
 preempt=laziest
 preempt=none
 
@@ -68,9 +69,7 @@ preempt=laziest
    repositories. This may fail in the future when patches no longer align
    or due to kernel updates. Maybe, I'd include the patches here.
 
-3. `800Hz/2.5ms` and `600Hz/1.6(6)ms` work best on my machine.
-
-4. Failed to commit transaction (conflicting files). Initally, the package
+3. Failed to commit transaction (conflicting files). Initally, the package
    did not own the `/etc/mkinitcpio.d/linux-cachyos-gcc-lazy*.preset` file.
    Remove the file manually and try again.
 
