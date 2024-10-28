@@ -18,15 +18,23 @@ export _localmodcfg_path="$HOME/.config/modprobed.db"
 export _makenconfig=""
 export _makegconfig=""
 
+# NUMA is optimized for multi-socket motherboards
+# It seems that in 2023 this is not really a huge regression anymore
+export _NUMAdisable=""
+
+# Transparent Hugepages { always, madvise }
+export _hugepage="always"
+
 # Running tick rate { 1000, 800, 600, 500 }
 # Select 1000 if your machine has less than or equal to 16 CPUs.
 # Otherwise, the best value is a mystery. If unsure, select 1000.
 export _HZ_ticks="1000"
 
 # Select preempt { full, lazy, realtime }
-# Select "full" for low-latency or "lazy" if you prefer throughput. 
-# Select "realtime" if running time-sensitive instruments.
-# Most often "full" preemption is sufficient.
+# Select "full" for low-latency, matching the CachyOS kernel preemption.
+# Select "lazy" for low-latency, matching the CachyOS RT kernel preemption.
+# Select "realtime" for real preemption, running time-sensitive instruments.
+# Kernel name suffix is "lazy" for full/lazy options; "lazy-rt" for realtime.
 export _preempt="full"
 
 # Use automatic CPU optimization
@@ -55,5 +63,5 @@ export _processor_opt=""
 cp PKGBUILD.lazy PKGBUILD
 
 # Build kernel lazy and lazy-headers packages
-nice -n 6 makepkg -scf --cleanbuild --skipinteg
+nice -n 15 makepkg -scf --cleanbuild --skipinteg
 

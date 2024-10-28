@@ -17,6 +17,20 @@
 _makenconfig=${_makenconfig-}
 _makegconfig=${_makegconfig-}
 
+# NUMA is optimized for multi-socket motherboards.
+# A single multi-core CPU actually runs slower with NUMA enabled.
+# See, https://bugs.archlinux.org/task/31187
+# It seems that in 2023 this is not really a huge regression anymore
+_NUMAdisable=${_NUMAdisable-}
+
+### Transparent Hugepages
+# ATTENTION - one of two predefined values should be selected!
+# 'always'  - always enable THP
+# 'madvise' - madvise, prevent applications from allocating more memory resources than necessary
+# More infos here:
+# https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/performance_tuning_guide/sect-red_hat_enterprise_linux-performance_tuning_guide-configuring_transparent_huge_pages
+_hugepage=${_hugepage-always}
+
 # Compile ONLY used modules to VASTLY reduce the number of modules built
 # and the build time.
 #
@@ -81,9 +95,9 @@ source=(
     "${_clearmodsource}/patches/0001-linux6.11.2-rt7.patch"
     "${_clearmodsource}/patches/0001-linux6.11.2-rt7-update1.patch"
     "0001-cachyos-base-all.patch"
-    "0001-bore-cachy-rt.patch"
+    "0001-sched-fair-remove-cachy-mods.patch"
+    "0001-linux6.11.y-bore.patch"
     "0002-change-750hz-to-800hz.patch"
-    "0003-tune-bore-and-migration-cost.patch"
     "${_clearmodsource}/patches/sched_eevdf_add_features_comments.patch"
     "${_clearmodsource}/patches/sched_eevdf_allow_shorter_slices_to_wakeup-preempt-rt.patch"
     "${_clearmodsource}/patches/sched_eevdf_remove_min_vruntime_copy.patch"
@@ -95,7 +109,9 @@ source=(
     "${_clearmodsource}/patches/0001-linux6.11.2-rt7-update4.patch"
     "${_clearmodsource}/patches/sched_deadline_use_hrtick_enabled_dl.patch"
     "0100-mm-kconfig-enable-rt-thp.patch"
-    "0200-clearlinux-extras.patch")
+    "0110-mm-bump-lru-gen-min-ttl.patch"
+    "0200-clearlinux-extras.patch"
+    "0210-xfs-reduce-unneeded-searches.patch")
 
 # Append extra sources in PKGBUILD.lazy.sh
 [ -n "$_extra_patch_or_url1" ] && source+=("$_extra_patch_or_url1")
@@ -117,7 +133,6 @@ prepare() {
     echo "-$pkgrel" > localversion.10-pkgrel
     echo "${pkgbase#linux}" > localversion.20-pkgname
 
-    local cpucores=$(nproc)
     local src
     for src in "${source[@]}"; do
         src="${src%%::*}"
@@ -125,12 +140,20 @@ prepare() {
         src="${src%.zst}"
         [[ $src = *.patch ]] || continue
         echo "Applying patch $src..."
-        if [[ "$src" = *"tune-bore-and-migration-cost.patch" && $cpucores -le 32 ]]; then
-            # keep migration_cost = 500000UL for machines less than or equal to 32 CPUs
-            sed 's/= 600000UL/= 500000UL/' "../$src" | patch -Np1
-        else
-            patch -Np1 < "../$src"
+        if [[ "$src" = *"0001-linux6.11.y-bore.patch" ]]; then
+            # Configure BORE to run efficiently with SCHED_AUTOGROUP enabled.
+            # Obey RUN_TO_PARITY instead, for better throughput.
+            cat "../$src" | \
+              sed 's/update_deadline(cfs_rq, curr)/update_deadline(cfs_rq, curr, tick)/' | \
+              sed 's/\(__read_mostly sched_burst_parity_threshold =\) 2;/\1 0;/' | \
+              patch -Np1
+            continue
         fi
+        if [[ "$src" = *"0110-mm-bump-lru-gen-min-ttl.patch" && "$_HZ_ticks" = "600" ]]; then
+            # The patch sets min_ttl_ms to 2000. Skip for 600Hz/1.6(6)ms.
+            continue
+        fi
+        patch -Np1 < "../$src"
     done
 
     echo "Setting config..."
@@ -174,6 +197,24 @@ prepare() {
 
     echo "Setting tick rate to ${_HZ_ticks}Hz..."
 
+    ### Disable NUMA
+    if [ -n "$_NUMAdisable" ]; then
+        echo "Disabling NUMA from kernel config..."
+        scripts/config -d NUMA \
+            -d AMD_NUMA \
+            -d X86_64_ACPI_NUMA \
+            -d NODES_SPAN_OTHER_NODES \
+            -d NUMA_EMU \
+            -d USE_PERCPU_NUMA_NODE_ID \
+            -d ACPI_NUMA \
+            -d ARCH_SUPPORTS_NUMA_BALANCING \
+            -d NODES_SHIFT \
+            -u NODES_SHIFT \
+            -d NEED_MULTIPLE_NODES \
+            -d NUMA_BALANCING \
+            -d NUMA_BALANCING_DEFAULT_ENABLED
+    fi
+
     echo "Setting 'full' tick type..."
     scripts/config -d HZ_PERIODIC -d NO_HZ_IDLE -d CONTEXT_TRACKING_FORCE -e NO_HZ_FULL_NODEF -e NO_HZ_FULL -e NO_HZ -e NO_HZ_COMMON -e CONTEXT_TRACKING
 
@@ -204,8 +245,16 @@ prepare() {
     scripts/config -m TCP_CONG_CUBIC -d DEFAULT_CUBIC -e TCP_CONG_BBR -e DEFAULT_BBR \
         --set-str DEFAULT_TCP_CONG bbr
 
-    echo "Selecting 'always' TRANSPARENT_HUGEPAGE config..."
-    scripts/config -d TRANSPARENT_HUGEPAGE_MADVISE -e TRANSPARENT_HUGEPAGE_ALWAYS
+    ### Select THP
+    [ -z "$_hugepage" ] && _die "The value is empty. Choose the correct one again."
+
+    case "$_hugepage" in
+        always) scripts/config -d TRANSPARENT_HUGEPAGE_MADVISE -e TRANSPARENT_HUGEPAGE_ALWAYS;;
+        madvise) scripts/config -d TRANSPARENT_HUGEPAGE_ALWAYS -e TRANSPARENT_HUGEPAGE_MADVISE;;
+        *) _die "The value '$_hugepage' is invalid. Choose the correct one again.";;
+    esac
+
+    echo "Selecting '$_hugepage' TRANSPARENT_HUGEPAGE config..."
 
     ### Run the config.sh script for extra kernel tuning
     if [ -s "${srcdir}"/config.sh ]; then
