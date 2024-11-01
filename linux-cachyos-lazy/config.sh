@@ -7,8 +7,6 @@ set -e
 ### Set minimal base_slice_ns for BORE.
 ### 1000Hz = 2.0ms, 800Hz = 2.5ms, 600Hz = 1.6(6)ms, 500Hz = 2.0ms.
 scripts/config --set-val MIN_BASE_SLICE_NS 1600000
-scripts/config --set-val MIGRATION_COST_BASE_NS 300000
-scripts/config --set-val MIGRATION_COST_STEP_NS 50000
 
 ### Disable the BPF (Berkeley Packet Filter).
 scripts/config --set-str LSM "landlock,lockdown,yama,integrity"
@@ -64,6 +62,7 @@ scripts/config -d BCACHEFS_DEBUG
 scripts/config -d BLK_DEBUG_FS
 scripts/config -d BT_DEBUGFS
 scripts/config -d CIFS_DEBUG
+scripts/config -d DEBUG_BUGVERBOSE
 scripts/config -d DEBUG_MEMORY_INIT
 scripts/config -d DEBUG_RODATA_TEST
 scripts/config -d DEBUG_WX
@@ -134,6 +133,9 @@ if true; then
     scripts/config -d KFENCE
 
     ### Disable automatic stack variable initialization. (Clear and XanMod default)
-    scripts/config -e INIT_STACK_NONE -d INIT_STACK_ALL_ZERO
+    scripts/config -d INIT_STACK_ALL_ZERO -e INIT_STACK_NONE
+
+    ### Disable utilization clamping for RT/FAIR tasks.
+    scripts/config -d UCLAMP_TASK
 fi
 

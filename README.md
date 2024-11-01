@@ -26,7 +26,12 @@ Select `_preempt=realtime` for the realtime kernel.
 
 ```bash
 bash PKGBUILD.lazy.sh
-sudo pacman -U linux-cachyos-gcc-lazy*.zst
+
+# lazy
+sudo pacman -U linux-cachyos-gcc-lazy-{6,h}*.zst
+
+# lazy-rt
+sudo pacman -U linux-cachyos-gcc-lazy-rt*.zst
 ```
 
 Removal is via pacman as well, when no longer needed.

@@ -1,7 +1,23 @@
+diff -uar a/mm/compaction.c b/mm/compaction.c
+--- a/mm/compaction.c
++++ b/mm/compaction.c
+@@ -1920,11 +1920,7 @@
+  * aggressively the kernel should compact memory in the
+  * background. It takes values in the range [0, 100].
+  */
+-#ifdef CONFIG_CACHY
+-static unsigned int __read_mostly sysctl_compaction_proactiveness;
+-#else
+-static unsigned int __read_mostly sysctl_compaction_proactiveness = 20;
+-#endif
++static unsigned int __read_mostly sysctl_compaction_proactiveness = 40;
+ static int sysctl_extfrag_threshold = 500;
+ static int __read_mostly sysctl_compact_memory;
+ 
 diff -uar a/mm/Kconfig b/mm/Kconfig
 --- a/mm/Kconfig
 +++ b/mm/Kconfig
-@@ -781,7 +781,7 @@
+@@ -816,7 +815,7 @@
  
  menuconfig TRANSPARENT_HUGEPAGE
  	bool "Transparent Hugepage Support"

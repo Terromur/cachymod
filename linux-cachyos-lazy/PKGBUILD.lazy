@@ -297,7 +297,12 @@ prepare() {
 
 build() {
     cd "$_srcname"
-    make "${BUILD_FLAGS[@]}" -j"$(nproc)" all
+
+    ### Respect -jN flag in /etc/makepkg.conf
+    local ncpu=$(grep "^MAKEFLAGS=" "/etc/makepkg.conf" | sed "s/^.*-j\([0-9]*\).*/\1/")
+    [[ -z "$ncpu" || "$ncpu" = "MAKEFLAGS"* ]] && ncpu=$(nproc)
+
+    make "${BUILD_FLAGS[@]}" -j"$ncpu" all
     make -C tools/bpf/bpftool vmlinux.h feature-clang-bpf-co-re=1
 
     local MODULE_FLAGS=(
