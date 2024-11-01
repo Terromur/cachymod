@@ -68,7 +68,7 @@ else
 fi
 
 _major=6.11
-_minor=5
+_minor=6
 pkgver=${_major}.${_minor}
 _stable=${_major}.${_minor}
 _srcname=linux-${_stable}

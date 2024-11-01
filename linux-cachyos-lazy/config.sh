@@ -25,9 +25,8 @@ fi
 ### Answer unconfigured (NEW) kernel options in the CachyOS config.
 scripts/config -d DRM_MGAG200_DISABLE_WRITECOMBINE
 scripts/config -d INTEL_TDX_HOST
-scripts/config -d REGULATOR_DA903X
-scripts/config -d GPIO_BT8XX
-scripts/config -d SND_SE6X
+scripts/config -m GPIO_BT8XX
+scripts/config -m SND_SE6X
 
 ### Disable tracers.
 scripts/config -d TASKS_RUDE_RCU
@@ -90,9 +89,6 @@ scripts/config -d WWAN_DEBUGFS
 if true; then
     ### Default to IOMMU passthrough domain type.
     scripts/config -d IOMMU_DEFAULT_DMA_LAZY -e IOMMU_DEFAULT_PASSTHROUGH
-
-    ### Disable Linear Address Masking support.
-    scripts/config -d ADDRESS_MASKING
 
     ### Disable track memory changes and idle page tracking.
     scripts/config -d MEM_SOFT_DIRTY -d IDLE_PAGE_TRACKING
