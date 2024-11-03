@@ -275,9 +275,12 @@ prepare() {
 
     ### Rewrite configuration
     echo "Rewrite configuration..."
-    make "${BUILD_FLAGS[@]}" prepare
+    make "${BUILD_FLAGS[@]}" prepare | \
+       grep -Ev '^  (AS|AR|CC|LD|BT|CE|CO|GE|HO|IN|MK|OB|PA|PE|PO|RE|ST|TA|TE|UN|UP|VD|X32)'
     yes "" | make "${BUILD_FLAGS[@]}" config >/dev/null
-    diff -u ../config .config || :
+    if [ -z "$_localmodcfg" ]; then
+       diff -u ../config .config || :
+    fi
 
     ### Prepared version
     make -s kernelrelease > version
@@ -302,8 +305,10 @@ build() {
     local ncpu=$(grep "^MAKEFLAGS=" "/etc/makepkg.conf" | sed "s/^.*-j\([0-9]*\).*/\1/")
     [[ -z "$ncpu" || "$ncpu" = "MAKEFLAGS"* ]] && ncpu=$(nproc)
 
-    make "${BUILD_FLAGS[@]}" -j"$ncpu" all
-    make -C tools/bpf/bpftool vmlinux.h feature-clang-bpf-co-re=1
+    make "${BUILD_FLAGS[@]}" -j"$ncpu" all | \
+       grep -Ev '^  (AS|AR|CC|LD|BT|CE|CO|GE|HO|IN|MK|OB|PA|PE|PO|RE|ST|TA|TE|UN|UP|VD|X32)'
+    make -C tools/bpf/bpftool vmlinux.h feature-clang-bpf-co-re=1 | \
+       grep -Ev '^  (AS|AR|CC|LD|BT|CE|CO|GE|HO|IN|MK|OB|PA|PE|PO|RE|ST|TA|TE|UN|UP|VD|X32)'
 
     local MODULE_FLAGS=(
        KERNEL_UNAME="${_kernuname}"
@@ -345,7 +350,7 @@ _package() {
 
     echo "Installing modules..."
     ZSTD_CLEVEL=6 make INSTALL_MOD_PATH="$pkgdir/usr" INSTALL_MOD_STRIP=1 \
-        DEPMOD=/doesnt/exist  modules_install  # Suppress depmod
+        DEPMOD=/doesnt/exist modules_install | grep -Ev '^  (IN|SI|ST|ZS)' # Suppress depmod
 
     # remove build links
     rm "$modulesdir"/build
