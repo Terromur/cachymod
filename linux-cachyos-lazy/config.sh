@@ -12,8 +12,10 @@ scripts/config --set-val MIN_BASE_SLICE_NS 1600000
 scripts/config --set-val MIGRATION_COST_BASE_NS 500000
 scripts/config --set-val MIGRATION_COST_STEP_NS 0
 
-### Disable the BPF (Berkeley Packet Filter).
-scripts/config --set-str LSM "landlock,lockdown,yama,integrity"
+### Disable the BPF (Berkeley Packet Filter), using CachyOS config.
+if [[ -z "$_use_clear_config" ]]; then
+    scripts/config --set-str LSM "landlock,lockdown,yama,integrity"
+fi
 
 ### Cluster scheduler support improves the CPU scheduler's decision
 ### making when dealing with machines that have clusters of CPUs.

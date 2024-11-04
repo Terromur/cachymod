@@ -8,6 +8,9 @@ set -e
 # Build options for the lazy variant.
 ############################################################
 
+# Use Clear config. Blank value to use CachyOS config.
+export _use_clear_config="y"
+
 # Compile ONLY used modules to VASTLY reduce the number of modules built
 # and the build time. Refer to the wiki page for more information.
 # https://wiki.archlinux.org/index.php/Modprobed-db

@@ -88,7 +88,8 @@ _clearmodsource="https://github.com/marioroy/clearmod/raw/refs/heads/main"
 
 source=(
     "https://cdn.kernel.org/pub/linux/kernel/v${pkgver%%.*}.x/${_srcname}.tar.xz"
-    "config"
+    "config.cachyos"
+    "config.clear"
     "config.sh"
     "auto-cpu-optimization.sh"
     "mkinitcpio.template"
@@ -157,7 +158,11 @@ prepare() {
     done
 
     echo "Setting config..."
-    cp ../config .config
+    if [ -z "$_use_clear_config" ]; then
+        cp ../"config.cachyos" .config
+    else
+        cp ../"config.clear" .config
+    fi
 
     ### Select CPU optimization (default Generic)
     if [ -n "$_processor_opt" ]; then
@@ -190,7 +195,7 @@ prepare() {
 
     case "$_HZ_ticks" in
         1000|800|600|500)
-            scripts/config -d HZ_800 -d HZ_300 -e "HZ_${_HZ_ticks}" --set-val HZ "${_HZ_ticks}";;
+            scripts/config -d HZ_1000 -d HZ_800 -d HZ_300 -e "HZ_${_HZ_ticks}" --set-val HZ "${_HZ_ticks}";;
         *)
             _die "The value $_HZ_ticks is invalid. Choose the correct one again."
     esac
@@ -293,7 +298,7 @@ prepare() {
 
     ### Save configuration for later reuse
     echo "Save configuration for later reuse..."
-    local basedir="$(dirname "$(readlink "${srcdir}/config")")"
+    local basedir="$(dirname "$(readlink "${srcdir}/config.cachyos")")"
     cat .config > "${basedir}/config-${pkgver}-${pkgrel}${pkgbase#linux}"
 }
 
