@@ -275,8 +275,7 @@ prepare() {
 
     ### Rewrite configuration
     echo "Rewrite configuration..."
-    make "${BUILD_FLAGS[@]}" prepare | \
-       grep -Ev '^  (AS|AR|CC|LD|BT|CE|CO|GE|HO|IN|MK|OB|PA|PE|PO|RE|ST|TA|TE|UN|UP|VD|X32)'
+    make "${BUILD_FLAGS[@]}" prepare
     yes "" | make "${BUILD_FLAGS[@]}" config >/dev/null
     if [ -z "$_localmodcfg" ]; then
        diff -u ../config .config || :
