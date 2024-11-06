@@ -73,7 +73,7 @@ pkgver=${_major}.${_minor}
 _stable=${_major}.${_minor}
 _srcname=linux-${_stable}
 pkgdesc='Linux BORE + Lazy Preemption + Cachy Sauce Kernel by CachyOS with other patches and improvements'
-pkgrel=1
+pkgrel=2
 _kernver="$pkgver-$pkgrel"
 _kernuname="${pkgver}-${_pkgsuffix}"
 arch=('x86_64')
@@ -159,8 +159,10 @@ prepare() {
 
     echo "Setting config..."
     if [ -z "$_use_clear_config" ]; then
+        echo "Using CachyOS config"
         cp ../"config.cachyos" .config
     else
+        echo "Using Clear config"
         cp ../"config.clear" .config
     fi
 
@@ -282,9 +284,6 @@ prepare() {
     echo "Rewrite configuration..."
     make "${BUILD_FLAGS[@]}" prepare
     yes "" | make "${BUILD_FLAGS[@]}" config >/dev/null
-    if [ -z "$_localmodcfg" ]; then
-       diff -u ../config .config || :
-    fi
 
     ### Prepared version
     make -s kernelrelease > version

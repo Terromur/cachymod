@@ -8,6 +8,7 @@
 # Patch0121: 0121-locking-rwsem-spin-faster.patch
 #
 # Patch0102: 0102-increase-the-ext4-default-commit-age.patch
+# Patch0104: 0104-pci-pme-wakeups.patch
 # Patch0108: 0108-smpboot-reuse-timer-calibration.patch
 # Patch0111: 0111-ipv4-tcp-allow-the-memory-tuning-for-tcp-to-go-a-lit.patch
 # Patch0116: 0116-migrate-some-systemd-defaults-to-the-kernel-defaults.patch
@@ -22,6 +23,129 @@
 # Patch0165: slack.patch
 # Patch0167: 0167-net-sock-increase-default-number-of-_SK_MEM_PACKETS-.patch
 ##
+
+# Allow disabling the LDT (local descriptor table), using CachyOS config.
+
+diff -uar a/arch/x86/Kconfig b/arch/x86/Kconfig
+--- a/arch/x86/Kconfig
++++ b/arch/x86/Kconfig
+@@ -1241,7 +1241,7 @@
+ 	default X86_LEGACY_VM86
+ 
+ config X86_16BIT
+-	bool "Enable support for 16-bit segments" if EXPERT
++	bool "Enable support for 16-bit segments"
+ 	default y
+ 	depends on MODIFY_LDT_SYSCALL
+ 	help
+@@ -2385,7 +2385,7 @@
+ 	  be set to 'N' under normal conditions.
+ 
+ config MODIFY_LDT_SYSCALL
+-	bool "Enable the LDT (local descriptor table)" if EXPERT
++	bool "Enable the LDT (local descriptor table)"
+ 	default y
+ 	help
+ 	  Linux can allow user programs to install a per-process x86
+
+# Allow setting the physical address and padding, using CachyOS config.
+
+diff -uar a/arch/x86/Kconfig b/arch/x86/Kconfig
+--- a/arch/x86/Kconfig
++++ b/arch/x86/Kconfig
+@@ -2094,7 +2094,7 @@
+ 	def_bool CRASH_RESERVE
+ 
+ config PHYSICAL_START
+-	hex "Physical address where the kernel is loaded" if (EXPERT || CRASH_DUMP)
++	hex "Physical address where the kernel is loaded"
+ 	default "0x1000000"
+ 	help
+ 	  This gives the physical address where the kernel is loaded.
+@@ -2243,7 +2243,7 @@
+ 	  If unsure, say Y.
+ 
+ config RANDOMIZE_MEMORY_PHYSICAL_PADDING
+-	hex "Physical memory mapping padding" if EXPERT
++	hex "Physical memory mapping padding"
+ 	depends on RANDOMIZE_MEMORY
+ 	default "0xa" if MEMORY_HOTPLUG
+ 	default "0x0"
+
+# Allow disabling legacy 16-bit UID syscall wrappers, and sysfs syscall support.
+
+diff -uar a/init/Kconfig b/init/Kconfig
+--- a/init/Kconfig
++++ b/init/Kconfig
+@@ -1495,7 +1495,7 @@
+ 	  Only use this if you really know what you are doing.
+ 
+ config UID16
+-	bool "Enable 16-bit UID system calls" if EXPERT
++	bool "Enable 16-bit UID system calls"
+ 	depends on HAVE_UID16 && MULTIUSER
+ 	default y
+ 	help
+@@ -1526,7 +1526,7 @@
+ 	  If unsure, leave the default option here.
+ 
+ config SYSFS_SYSCALL
+-	bool "Sysfs syscall support" if EXPERT
++	bool "Sysfs syscall support"
+ 	default y
+ 	help
+ 	  sys_sysfs is an obsolete system call no longer supported in libc.
+
+# Allow 64bit function alignment, using CachyOS config.
+
+diff -uar a/lib/Kconfig.debug b/lib/Kconfig.debug
+--- a/lib/Kconfig.debug
++++ b/lib/Kconfig.debug
+@@ -512,7 +512,7 @@
+ 
+ config DEBUG_FORCE_FUNCTION_ALIGN_64B
+ 	bool "Force all function address 64B aligned"
+-	depends on EXPERT && (X86_64 || ARM64 || PPC32 || PPC64 || ARC || RISCV || S390)
++	depends on (X86_64 || ARM64 || PPC32 || PPC64 || ARC || RISCV || S390)
+ 	select FUNCTION_ALIGNMENT_64B
+ 	help
+ 	  There are cases that a commit from one domain changes the function
+
+# Allow disabling more debug knobs, using CachyOS config.
+
+diff -uar a/lib/Kconfig.debug b/lib/Kconfig.debug
+--- a/lib/Kconfig.debug
++++ b/lib/Kconfig.debug
+@@ -198,7 +198,7 @@
+ 	  (about 3KB), but can make the kernel logs easier to read.
+ 
+ config DEBUG_BUGVERBOSE
+-	bool "Verbose BUG() reporting (adds 70K)" if DEBUG_KERNEL && EXPERT
++	bool "Verbose BUG() reporting (adds 70K)" if DEBUG_KERNEL
+ 	depends on BUG && (GENERIC_BUG || HAVE_DEBUG_BUGVERBOSE)
+ 	default y
+ 	help
+@@ -874,7 +874,7 @@
+ 	  regions to be regularly checked for invalid topology.
+ 
+ config DEBUG_MEMORY_INIT
+-	bool "Debug memory initialisation" if EXPERT
++	bool "Debug memory initialisation"
+ 	default !EXPERT
+ 	help
+ 	  Enable this for additional checks during memory initialisation.
+diff -uar a/mm/Kconfig.debug b/mm/Kconfig.debug
+--- a/mm/Kconfig.debug
++++ b/mm/Kconfig.debug
+@@ -47,7 +47,7 @@
+ 
+ config SLUB_DEBUG
+ 	default y
+-	bool "Enable SLUB debugging support" if EXPERT
++	bool "Enable SLUB debugging support"
+ 	depends on SYSFS && !SLUB_TINY
+ 	select STACKDEPOT if STACKTRACE_SUPPORT
+ 	help
 
 # Patch0102: 0102-increase-the-ext4-default-commit-age.patch
 
@@ -57,6 +181,35 @@ index 9c3ada74ffb1..c4aef0bb2661 100644
  
  #ifdef CONFIG_JBD2_DEBUG
  /*
+-- 
+https://clearlinux.org
+
+# Patch0104: 0104-pci-pme-wakeups.patch
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arjan van de Ven <arjan@linux.intel.com>
+Date: Mon, 14 Mar 2016 11:10:58 -0600
+Subject: [PATCH] pci pme wakeups
+
+Reduce wakeups for PME checks, which are a workaround for miswired
+boards (sadly, too many of them) in laptops.
+---
+ drivers/pci/pci.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/pci/pci.c b/drivers/pci/pci.c
+index d25122fbe98a..dbfb6aaa4a07 100644
+--- a/drivers/pci/pci.c
++++ b/drivers/pci/pci.c
+@@ -60,7 +60,7 @@ struct pci_pme_device {
+ 	struct pci_dev *dev;
+ };
+ 
+-#define PME_TIMEOUT 1000 /* How long between PME checks */
++#define PME_TIMEOUT 4000 /* How long between PME checks */
+ 
+ static void pci_dev_d3_sleep(struct pci_dev *dev)
+ {
 -- 
 https://clearlinux.org
 
