@@ -26,8 +26,11 @@ if [[ $(uname -m) = *"x86"* ]]; then
     scripts/config -d SCHED_CLUSTER
 fi
 
-### Enable single-depth WCHAN output. (default disable in Clear config)
+### Enable single-depth WCHAN output. (disabled in Clear config)
 scripts/config -e SCHED_OMIT_FRAME_POINTER
+
+### Enable filter access to /dev/mem. (disabled in Clear config)
+scripts/config -e DEVMEM -e STRICT_DEVMEM -e IO_STRICT_DEVMEM
 
 ### Build the USB Attached SCSI into the kernel versus a module.
 scripts/config -e USB_UAS
@@ -63,7 +66,6 @@ scripts/config -d TIMERLAT_TRACER
 scripts/config -d SYNTH_EVENTS
 scripts/config -d USER_EVENTS
 scripts/config -d HIST_TRIGGERS
-scripts/config -d STRICT_DEVMEM
 
 ### Disable debug.
 scripts/config -d SLUB_DEBUG
@@ -239,6 +241,9 @@ if [ -z "$_use_clear_config" ]; then
 
     ### Default to none for vsyscall table for legacy applications.
     scripts/config -d LEGACY_VSYSCALL_XONLY -e LEGACY_VSYSCALL_NONE
+
+    ### Disable the legacy raw MIDI support for UMP streams.
+    scripts/config -d SND_UMP_LEGACY_RAWMIDI
 
     ### Disable mitigate Straight-Line-Speculation.
     scripts/config -d MITIGATION_SLS
