@@ -4,13 +4,15 @@
 ### Exit immediately on error.
 set -e
 
-### Set minimal base_slice_ns for BORE.
+### Answer unconfigured (NEW) kernel options in the CachyOS config.
+scripts/config -d DRM_MGAG200_DISABLE_WRITECOMBINE
+scripts/config -d GPIO_BT8XX
+scripts/config -d INTEL_TDX_HOST
+scripts/config -d SND_SE6X
+
+### Set the minimal base_slice_ns option for BORE.
 ### 1000Hz = 2.0ms, 800Hz = 2.5ms, 600Hz = 1.6(6)ms, 500Hz = 2.0ms.
 scripts/config --set-val MIN_BASE_SLICE_NS 1600000
-
-### Linux default-compatible preset for BORE.
-scripts/config --set-val MIGRATION_COST_BASE_NS 500000
-scripts/config --set-val MIGRATION_COST_STEP_NS 0
 
 ### Disable the BPF (Berkeley Packet Filter).
 scripts/config --set-str LSM "landlock,lockdown,yama,integrity"
@@ -26,25 +28,40 @@ if [[ $(uname -m) = *"x86"* ]]; then
     scripts/config -d SCHED_CLUSTER
 fi
 
-### Enable single-depth WCHAN output. (disabled in Clear config)
-scripts/config -e SCHED_OMIT_FRAME_POINTER
+### Enable ACPI options. (default -m)
+scripts/config -e ACPI_TAD -e ACPI_VIDEO -e ACPI_WMI -e INPUT_SPARSEKMAP
 
-### Enable filter access to /dev/mem. (disabled in Clear config)
-scripts/config -e DEVMEM -e STRICT_DEVMEM -e IO_STRICT_DEVMEM
+### Enable input modules. (default -m)
+scripts/config -e SERIO -e SERIO_I8042 -e SERIO_LIBPS2 -e UHID -e USB_HID
+scripts/config -e HID_APPLE -e HID_BELKIN -e HID_CHERRY -e HID_CHICONY
+scripts/config -e HID_GENERIC -e HID_HOLTEK -e HID_KENSINGTON -e HID_LENOVO
+scripts/config -e HID_LOGITECH -e HID_LOGITECH_DJ -e HID_LOGITECH_HIDPP
+scripts/config -e HID_MICROSOFT -e HID_SAMSUNG -e HID_VIVALDI
 
-### Build the USB Attached SCSI into the kernel versus a module.
-scripts/config -e USB_UAS
+### Enable storage modules. (default -m)
+scripts/config -e NVME_KEYRING -e NVME_AUTH -e NVME_CORE
+scripts/config -e BLK_DEV_DM -e BLK_DEV_LOOP -e BLK_DEV_NVME
+scripts/config -e BLK_DEV_MD -d MD_AUTODETECT -d DM_INIT
+scripts/config -e USB_XHCI_PCI -e USB_XHCI_PCI_RENESAS -e USB_XHCI_PLATFORM
+scripts/config -e USB_STORAGE -e USB_STORAGE_REALTEK -e USB_UAS
 
-### Answer unconfigured (NEW) kernel options in the CachyOS config.
-scripts/config -d DRM_MGAG200_DISABLE_WRITECOMBINE
-scripts/config -d INTEL_TDX_HOST
-scripts/config -m GPIO_BT8XX
-scripts/config -m SND_SE6X
+### Enable file systems. (default -m)
+scripts/config -d MSDOS_FS -e FAT_FS -e VFAT_FS
+scripts/config -e EXT4_FS -e FS_MBCACHE -e JBD2
+scripts/config -e BTRFS_FS -e F2FS_FS -e XFS_FS
+
+### Disable hardware montitors.
+scripts/config -d IGB_HWMON
+scripts/config -d IXGBE_HWMON
+scripts/config -d TIGON3_HWMON
+scripts/config -d SCSI_UFS_HWMON
+scripts/config -d SENSORS_IIO_HWMON
 
 ### Disable tracers.
 scripts/config -d TASKS_RUDE_RCU
 scripts/config -d ATH5K_TRACER
 scripts/config -d CONTEXT_SWITCH_TRACER
+scripts/config -d DM_UEVENT
 scripts/config -d FUNCTION_PROFILER
 scripts/config -d FUNCTION_TRACER
 scripts/config -d FTRACE_RECORD_RECURSION
@@ -53,12 +70,15 @@ scripts/config -d FTRACE_VALIDATE_RCU_IS_WATCHING
 scripts/config -d HWLAT_TRACER
 scripts/config -d IRQSOFF_TRACER
 scripts/config -d KPROBE_EVENTS_ON_NOTRACE
+scripts/config -d LOCK_EVENT_COUNTS
 scripts/config -d MMIOTRACE
 scripts/config -d MMIOTRACE_TEST
 scripts/config -d OSNOISE_TRACER
+scripts/config -d PM_DEVFREQ_EVENT
 scripts/config -d PM_TRACE_RTC
 scripts/config -d PREEMPT_TRACER
 scripts/config -d PSTORE_FTRACE
+scripts/config -d REGULATOR_NETLINK_EVENTS
 scripts/config -d SCHED_TRACER
 scripts/config -d STACKTRACE_BUILD_ID
 scripts/config -d STACK_TRACER
@@ -78,17 +98,18 @@ scripts/config -d PM_ADVANCED_DEBUG
 scripts/config -d PM_SLEEP_DEBUG
 scripts/config -d LATENCYTOP
 scripts/config -d LEDS_TRIGGER_CPU
-scripts/config -d SOFTLOCKUP_DETECTOR_INTR_STORM
-scripts/config -d GENERIC_IRQ_STAT_SNAPSHOT
 scripts/config -d PCIEAER_INJECT
 scripts/config -d GENERIC_IRQ_DEBUGFS
 scripts/config -d GENERIC_IRQ_INJECTION
 scripts/config -d FUNCTION_ERROR_INJECTION
 scripts/config -d PRINTK_INDEX
+scripts/config -d SOFTLOCKUP_DETECTOR_INTR_STORM
+scripts/config -d GENERIC_IRQ_STAT_SNAPSHOT
 scripts/config -d 6LOWPAN_DEBUGFS
 scripts/config -d AF_RXRPC_DEBUG
 scripts/config -d AFS_DEBUG
 scripts/config -d AFS_DEBUG_CURSOR
+scripts/config -d ATA_VERBOSE_ERROR
 scripts/config -d ATH10K_DEBUG
 scripts/config -d ATH10K_DEBUGFS
 scripts/config -d ATH12K_DEBUG
@@ -108,6 +129,7 @@ scripts/config -d CFG80211_DEBUGFS
 scripts/config -d CIFS_DEBUG
 scripts/config -d CIFS_DEBUG2
 scripts/config -d CIFS_DEBUG_DUMP_KEYS
+scripts/config -d CMA_DEBUGFS
 scripts/config -d CROS_EC_DEBUGFS
 scripts/config -d CRYPTO_DEV_AMLOGIC_GXL_DEBUG
 scripts/config -d CRYPTO_DEV_CCP_DEBUGFS
@@ -133,6 +155,8 @@ scripts/config -d DRM_XE_DEBUG_MEM
 scripts/config -d DRM_XE_DEBUG_SRIOV
 scripts/config -d DRM_XE_DEBUG_VM
 scripts/config -d DVB_USB_DEBUG
+scripts/config -d EARLY_PRINTK_DBGP
+scripts/config -d EARLY_PRINTK_USB_XDBC
 scripts/config -d EXT4_DEBUG
 scripts/config -d HIST_TRIGGERS_DEBUG
 scripts/config -d INFINIBAND_MTHCA_DEBUG
@@ -144,6 +168,7 @@ scripts/config -d LIBERTAS_THINFIRM_DEBUG
 scripts/config -d NETFS_DEBUG
 scripts/config -d NFS_DEBUG
 scripts/config -d NVME_TARGET_DEBUGFS
+scripts/config -d NVME_VERBOSE_ERRORS
 scripts/config -d OCFS2_DEBUG_FS
 scripts/config -d PNP_DEBUG_MESSAGES
 scripts/config -d QUOTA_DEBUG
@@ -165,49 +190,46 @@ scripts/config -d WCN36XX_DEBUGFS
 scripts/config -d WWAN_DEBUGFS
 scripts/config -d XEN_DEBUG_FS
 
-### Apply various Clear Linux defaults, using the CachyOS config.
-### Uncomment the exit line to skip.
+### Apply various Clear Linux defaults.
+### To skip, uncomment the exit line.
 
 ### exit 0
 
-if [ -z "$_use_clear_config" ]; then
+if [[ $(uname -m) = *"x86"* ]]; then
     ### Default to IOMMU passthrough domain type.
     scripts/config -d IOMMU_DEFAULT_DMA_LAZY -e IOMMU_DEFAULT_PASSTHROUGH
+
+    ### Disable support for memory balloon compaction.
+    scripts/config -d BALLOON_COMPACTION
+
+    ### Disable the Contiguous Memory Allocator.
+    scripts/config -d CMA
+
+    ### Disable HWPoison pages injector.
+    scripts/config -d HWPOISON_INJECT
 
     ### Disable track memory changes and idle page tracking.
     scripts/config -d MEM_SOFT_DIRTY -d IDLE_PAGE_TRACKING
 
-    ### Require boot parameter to enable pressure stall information tracking.
-    scripts/config -e PSI_DEFAULT_DISABLED
+    ### Disable khugepaged to put read-only file-backed pages in THP.
+    scripts/config -d READ_ONLY_THP_FOR_FS
 
-    if [[ $(uname -m) = *"x86"* ]]; then
-        ### Force all function address 64B aligned.
-        scripts/config -e DEBUG_FORCE_FUNCTION_ALIGN_64B
+    ### Force all function address 64B aligned.
+    scripts/config -e DEBUG_FORCE_FUNCTION_ALIGN_64B
 
-        ### Set the physical address where the kernel is loaded and alignment.
-        scripts/config --set-val PHYSICAL_START 0x100000
-        scripts/config --set-val PHYSICAL_ALIGN 0x1000000
+    ### Disable heap memory zeroing on allocation by default.
+    ### Instead, enable register zeroing on function exit.
+    scripts/config -d INIT_ON_ALLOC_DEFAULT_ON
+    scripts/config -e ZERO_CALL_USED_REGS
 
-        ### Set the physical memory mapping padding.
-        scripts/config --set-val RANDOMIZE_MEMORY_PHYSICAL_PADDING 0x1
+    ### Disable the general notification queue.
+    scripts/config -d WATCH_QUEUE
 
-        ### Enable the hardware random number generator support.
-        scripts/config -e HW_RANDOM_INTEL
-        scripts/config -e HW_RANDOM_AMD
-        scripts/config -e HW_RANDOM_VIRTIO
-    fi
+    ### Disable Watchdog Timer Support.
+    scripts/config -d WATCHDOG
 
-    ### Disable DAMON: Data Access Monitoring Framework.
-    scripts/config -d DAMON
-
-    ### Disable the virtual ELF core file of the live kernel.
-    scripts/config -d PROC_KCORE
-
-    ### Set the default setting of memory_corruption_check.
-    scripts/config -d X86_BOOTPARAM_MEMORY_CORRUPTION_CHECK
-
-    ### Disable reroute for broken boot IRQs.
-    scripts/config -d X86_REROUTE_FOR_BROKEN_BOOT_IRQS
+    ### Disable workqueue power-efficient mode by default.
+    scripts/config -d WQ_POWER_EFFICIENT_DEFAULT
 
     ### Disable statistic for Change Page Attribute.
     scripts/config -d X86_CPA_STATISTICS
@@ -215,38 +237,14 @@ if [ -z "$_use_clear_config" ]; then
     ### Disable x86 instruction decoder selftest.
     scripts/config -d X86_DECODER_SELFTEST
 
-    ### Disable EFI mixed-mode support.
-    scripts/config -d EFI_MIXED
-
-    ### Disable x32 ABI for 64-bit mode.
-    scripts/config -d X86_X32_ABI
-
-    ### Disable locking event counts collection.
-    scripts/config -d LOCK_EVENT_COUNTS
-
-    ### Disable userfaultfd() system call.
-    scripts/config -d USERFAULTFD
-
-    ### Disable the general notification queue.
-    scripts/config -d WATCH_QUEUE
+    ### Disable 5-level page tables support.
+    scripts/config -d X86_5LEVEL
 
     ### Disable strong stack protector.
     scripts/config -d STACKPROTECTOR_STRONG -e STACKPROTECTOR
 
-    ### Disable default state of kernel stack offset randomization.
-    scripts/config -d RANDOMIZE_KSTACK_OFFSET_DEFAULT
-
-    ### Disable workqueue power-efficient mode by default.
-    scripts/config -d WQ_POWER_EFFICIENT_DEFAULT
-
     ### Default to none for vsyscall table for legacy applications.
     scripts/config -d LEGACY_VSYSCALL_XONLY -e LEGACY_VSYSCALL_NONE
-
-    ### Disable the legacy raw MIDI support for UMP streams.
-    scripts/config -d SND_UMP_LEGACY_RAWMIDI
-
-    ### Disable mitigate Straight-Line-Speculation.
-    scripts/config -d MITIGATION_SLS
 
     ### Disable LDT (local descriptor table) to run 16-bit or segmented code such as
     ### DOSEMU or some Wine programs. Enabling this adds a small amount of overhead
@@ -258,9 +256,6 @@ if [ -z "$_use_clear_config" ]; then
 
     ### Enforce strict size checking for sigaltstack.
     scripts/config -e STRICT_SIGALTSTACK_SIZE
-
-    ### Disable 5-level page tables support.
-    scripts/config -d X86_5LEVEL
 
     ### Disable Kexec and crash features.
     scripts/config -d KEXEC -d KEXEC_FILE -d CRASH_DUMP
@@ -286,55 +281,10 @@ if [ -z "$_use_clear_config" ]; then
     ### Disable cgroup I/O controller for assigning an I/O priority class.
     scripts/config -d BLK_CGROUP_IOPRIO
 
-    ### Disable PCI Express ECRC settings control.
-    scripts/config -d PCIE_ECRC
-
-    ### Disable PCI Express Downstream Port Containment support.
-    scripts/config -d PCIE_DPC
-
-    ### Disable PCI Express ASPM L0s and L1, even if the BIOS enabled them.
-    scripts/config -d PCIEASPM_DEFAULT -e PCIEASPM_PERFORMANCE
-
-    ### Set default CPUFreq governor
-    scripts/config -d CPU_FREQ_DEFAULT_GOV_SCHEDUTIL -e CPU_FREQ_DEFAULT_GOV_PERFORMANCE
-
-    ### Disable EDAC (Error Detection And Correction) reporting.
-    scripts/config -d EDAC
-
-    ### Disable PMIC (Power Management Integrated Circuit) operation region support.
-    scripts/config -d PMIC_OPREGION
-
-    ### Disable Hardware Spinlock drivers.
-    scripts/config -d HWSPINLOCK
-
-    ### Disable filter media drivers and SDR platform devices.
-    scripts/config -d MEDIA_SUPPORT_FILTER -d SDR_PLATFORM_DRIVERS
-
-    ### Disable remote controller support and DVB Core/Drivers.
-    scripts/config -d RC_CORE -d DVB_PLATFORM_DRIVERS -d DVB_CORE
-
-    ### Disable USB Serial Converter support.
-    scripts/config -d USB_SERIAL
-
-    ### Disable Watchdog Timer Support.
-    scripts/config -d WATCHDOG
-
     ### Default to the 2:1 compression allocator (zbud) as the default allocator.
     scripts/config -d ZSWAP_DEFAULT_ON -d ZSWAP_SHRINKER_DEFAULT_ON
     scripts/config -d ZSWAP_ZPOOL_DEFAULT_ZSMALLOC -d ZSMALLOC_STAT
     scripts/config -e ZSWAP_ZPOOL_DEFAULT_ZBUD -e ZBUD
     scripts/config --set-str ZSWAP_ZPOOL_DEFAULT "zbud"
-
-    ### Disable support for memory balloon compaction.
-    scripts/config -d BALLOON_COMPACTION
-
-    ### Disable HWPoison pages injector.
-    scripts/config -d HWPOISON_INJECT
-
-    ### Disable khugepaged to put read-only file-backed pages in THP.
-    scripts/config -d READ_ONLY_THP_FOR_FS
-
-    ### Disable the Contiguous Memory Allocator.
-    scripts/config -d CMA
 fi
 

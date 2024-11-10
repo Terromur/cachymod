@@ -68,12 +68,12 @@ else
 fi
 
 _major=6.11
-_minor=6
+_minor=7
 pkgver=${_major}.${_minor}
 _stable=${_major}.${_minor}
 _srcname=linux-${_stable}
 pkgdesc='Linux BORE + Lazy Preemption + Cachy Sauce Kernel by CachyOS with other patches and improvements'
-pkgrel=3
+pkgrel=2
 _kernver="$pkgver-$pkgrel"
 _kernuname="${pkgver}-${_pkgsuffix}"
 arch=('x86_64')
@@ -88,9 +88,9 @@ _clearmodsource="https://github.com/marioroy/clearmod/raw/refs/heads/main"
 
 source=(
     "https://cdn.kernel.org/pub/linux/kernel/v${pkgver%%.*}.x/${_srcname}.tar.xz"
-    "config.cachyos"
-    "config.clear"
+    "config"
     "config.sh"
+    "trim.sh"
     "auto-cpu-optimization.sh"
     "mkinitcpio.template"
     "${_clearmodsource}/patches/0001-linux6.11.2-rt7.patch"
@@ -158,13 +158,7 @@ prepare() {
     done
 
     echo "Setting config..."
-    if [ -z "$_use_clear_config" ]; then
-        echo "Using CachyOS config"
-        cp ../"config.cachyos" .config
-    else
-        echo "Using Clear config"
-        cp ../"config.clear" .config
-    fi
+    cp ../config .config
 
     ### Select CPU optimization (default Generic)
     if [ -n "$_processor_opt" ]; then
@@ -263,15 +257,21 @@ prepare() {
 
     echo "Selecting '$_hugepage' TRANSPARENT_HUGEPAGE config..."
 
-    ### Run the config.sh script for extra kernel tuning
-    if [ -s "${srcdir}"/config.sh ]; then
+    ### Run the config.sh script for kernel tuning
+    if [[ -s "${srcdir}"/config.sh ]]; then
         echo "Further kernel customization..."
         bash "${srcdir}"/config.sh
     fi
 
+    ### Optionally run the trim.sh script to trim the kernel
+    if [[ -n "$_runtrim_script" && -s "${srcdir}"/trim.sh ]]; then
+        echo "Further trimming kernel options..."
+        bash "${srcdir}"/trim.sh
+    fi
+
     ### Optionally load needed modules for the make localmodconfig
     # See https://aur.archlinux.org/packages/modprobed-db
-    if [ -n "$_localmodcfg" ]; then
+    if [[ -n "$_localmodcfg" ]]; then
         if [ -e "$_localmodcfg_path" ]; then
             echo "Running Steven Rostedt's make localmodconfig now"
             make "${BUILD_FLAGS[@]}" LSMOD="${_localmodcfg_path}" localmodconfig
@@ -297,7 +297,7 @@ prepare() {
 
     ### Save configuration for later reuse
     echo "Save configuration for later reuse..."
-    local basedir="$(dirname "$(readlink "${srcdir}/config.cachyos")")"
+    local basedir="$(dirname "$(readlink "${srcdir}/config")")"
     cat .config > "${basedir}/config-${pkgver}-${pkgrel}${pkgbase#linux}"
 }
 
@@ -352,7 +352,7 @@ _package() {
         "${pkgdir}/etc/mkinitcpio.d/linux-cachyos-gcc-${flavour}.preset"
 
     echo "Installing modules..."
-    ZSTD_CLEVEL=6 make INSTALL_MOD_PATH="$pkgdir/usr" INSTALL_MOD_STRIP=1 \
+    ZSTD_CLEVEL=6 make "${BUILD_FLAGS[@]}" INSTALL_MOD_PATH="$pkgdir/usr" INSTALL_MOD_STRIP=1 \
         DEPMOD=/doesnt/exist modules_install | grep -Ev '^  (IN|SI|ST|ZS)' # Suppress depmod
 
     # remove build links

@@ -8,12 +8,22 @@ set -e
 # Build options for the lazy variant.
 ############################################################
 
-# Use Clear config. Blank value to use CachyOS config.
-export _use_clear_config="y"
+# Run the "trim.sh" script to trim the kernel
+# To deselect ~ 1,500 kernel options
+export _runtrim_script=""
 
 # Compile ONLY used modules to VASTLY reduce the number of modules built
 # and the build time. Refer to the wiki page for more information.
 # https://wiki.archlinux.org/index.php/Modprobed-db
+#
+# Installation:
+#    sudo pacman -S modprobed-db
+#    sudo modprobed-db store  (creates ~/.config/modprobed-db.conf)
+#
+# Be sure to run "store" from a stock CachyOS kernel at least once.
+# Run subsequently to store any new module(s) to the database.
+#    sudo modprobed-db store  (refreshes ~/.config/modprobed.db)
+#
 export _localmodcfg=""
 export _localmodcfg_path="$HOME/.config/modprobed.db"
 

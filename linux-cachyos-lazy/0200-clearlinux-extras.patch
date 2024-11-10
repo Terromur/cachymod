@@ -24,7 +24,7 @@
 # Patch0167: 0167-net-sock-increase-default-number-of-_SK_MEM_PACKETS-.patch
 ##
 
-# Allow disabling the LDT (local descriptor table), using CachyOS config.
+# Allow disabling the LDT (local descriptor table).
 
 diff -uar a/arch/x86/Kconfig b/arch/x86/Kconfig
 --- a/arch/x86/Kconfig
@@ -47,30 +47,6 @@ diff -uar a/arch/x86/Kconfig b/arch/x86/Kconfig
  	default y
  	help
  	  Linux can allow user programs to install a per-process x86
-
-# Allow setting the physical address and padding, using CachyOS config.
-
-diff -uar a/arch/x86/Kconfig b/arch/x86/Kconfig
---- a/arch/x86/Kconfig
-+++ b/arch/x86/Kconfig
-@@ -2094,7 +2094,7 @@
- 	def_bool CRASH_RESERVE
- 
- config PHYSICAL_START
--	hex "Physical address where the kernel is loaded" if (EXPERT || CRASH_DUMP)
-+	hex "Physical address where the kernel is loaded"
- 	default "0x1000000"
- 	help
- 	  This gives the physical address where the kernel is loaded.
-@@ -2243,7 +2243,7 @@
- 	  If unsure, say Y.
- 
- config RANDOMIZE_MEMORY_PHYSICAL_PADDING
--	hex "Physical memory mapping padding" if EXPERT
-+	hex "Physical memory mapping padding"
- 	depends on RANDOMIZE_MEMORY
- 	default "0xa" if MEMORY_HOTPLUG
- 	default "0x0"
 
 # Allow disabling legacy 16-bit UID syscall wrappers, and sysfs syscall support.
 
@@ -96,22 +72,7 @@ diff -uar a/init/Kconfig b/init/Kconfig
  	help
  	  sys_sysfs is an obsolete system call no longer supported in libc.
 
-# Allow 64bit function alignment, using CachyOS config.
-
-diff -uar a/lib/Kconfig.debug b/lib/Kconfig.debug
---- a/lib/Kconfig.debug
-+++ b/lib/Kconfig.debug
-@@ -512,7 +512,7 @@
- 
- config DEBUG_FORCE_FUNCTION_ALIGN_64B
- 	bool "Force all function address 64B aligned"
--	depends on EXPERT && (X86_64 || ARM64 || PPC32 || PPC64 || ARC || RISCV || S390)
-+	depends on (X86_64 || ARM64 || PPC32 || PPC64 || ARC || RISCV || S390)
- 	select FUNCTION_ALIGNMENT_64B
- 	help
- 	  There are cases that a commit from one domain changes the function
-
-# Allow disabling more debug knobs, using CachyOS config.
+# Allow 64bit function alignment, and disable more debug knobs.
 
 diff -uar a/lib/Kconfig.debug b/lib/Kconfig.debug
 --- a/lib/Kconfig.debug
@@ -125,6 +86,15 @@ diff -uar a/lib/Kconfig.debug b/lib/Kconfig.debug
  	depends on BUG && (GENERIC_BUG || HAVE_DEBUG_BUGVERBOSE)
  	default y
  	help
+@@ -512,7 +512,7 @@
+ 
+ config DEBUG_FORCE_FUNCTION_ALIGN_64B
+ 	bool "Force all function address 64B aligned"
+-	depends on EXPERT && (X86_64 || ARM64 || PPC32 || PPC64 || ARC || RISCV || S390)
++	depends on (X86_64 || ARM64 || PPC32 || PPC64 || ARC || RISCV || S390)
+ 	select FUNCTION_ALIGNMENT_64B
+ 	help
+ 	  There are cases that a commit from one domain changes the function
 @@ -874,7 +874,7 @@
  	  regions to be regularly checked for invalid topology.
  
@@ -134,6 +104,7 @@ diff -uar a/lib/Kconfig.debug b/lib/Kconfig.debug
  	default !EXPERT
  	help
  	  Enable this for additional checks during memory initialisation.
+
 diff -uar a/mm/Kconfig.debug b/mm/Kconfig.debug
 --- a/mm/Kconfig.debug
 +++ b/mm/Kconfig.debug
