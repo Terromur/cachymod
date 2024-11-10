@@ -1,6 +1,6 @@
 #!/bin/bash
 # Trim kernel by deselecting options not enabled in the Clear Linux config.
-# The options found here are not deselected in the CachyOS config.
+# Options deselected in the CachyOS config have been pruned from this list.
 # Last checked: 2024-11-09
 
 # Exit immediately on error.
