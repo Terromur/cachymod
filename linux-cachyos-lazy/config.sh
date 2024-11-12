@@ -50,6 +50,10 @@ scripts/config -d MSDOS_FS -e FAT_FS -e VFAT_FS
 scripts/config -e EXT4_FS -e FS_MBCACHE -e JBD2
 scripts/config -e BTRFS_FS -e F2FS_FS -e XFS_FS
 
+### Default HugeTLB Vmemmap Optimization (HVO) to on. It can be disabled via
+### hugetlb_free_vmemmap=off (cmdline) or vm.hugetlb_optimize_vmemmap (sysctl).
+scripts/config -e HUGETLB_PAGE_OPTIMIZE_VMEMMAP_DEFAULT_ON
+
 ### Disable hardware montitors.
 scripts/config -d IGB_HWMON
 scripts/config -d IXGBE_HWMON
@@ -75,7 +79,6 @@ scripts/config -d MMIOTRACE
 scripts/config -d MMIOTRACE_TEST
 scripts/config -d OSNOISE_TRACER
 scripts/config -d PM_DEVFREQ_EVENT
-scripts/config -d PM_TRACE_RTC
 scripts/config -d PREEMPT_TRACER
 scripts/config -d PSTORE_FTRACE
 scripts/config -d REGULATOR_NETLINK_EVENTS
@@ -96,6 +99,7 @@ scripts/config -d ACPI_DEBUG
 scripts/config -d PM_DEBUG
 scripts/config -d PM_ADVANCED_DEBUG
 scripts/config -d PM_SLEEP_DEBUG
+scripts/config -d PM_TRACE_RTC
 scripts/config -d LATENCYTOP
 scripts/config -d LEDS_TRIGGER_CPU
 scripts/config -d PCIEAER_INJECT
@@ -199,6 +203,15 @@ if [[ $(uname -m) = *"x86"* ]]; then
     ### Default to IOMMU passthrough domain type.
     scripts/config -d IOMMU_DEFAULT_DMA_LAZY -e IOMMU_DEFAULT_PASSTHROUGH
 
+    ### Unallow upgrading ACPI tables via initrd.
+    scripts/config -d ACPI_TABLE_UPGRADE
+
+    ### Disable the PCI slot detection driver.
+    scripts/config -d ACPI_PCI_SLOT
+
+    ### Disable extended Error Log support.
+    scripts/config -d ACPI_EXTLOG
+
     ### Disable support for memory balloon compaction.
     scripts/config -d BALLOON_COMPACTION
 
@@ -210,6 +223,9 @@ if [[ $(uname -m) = *"x86"* ]]; then
 
     ### Disable track memory changes and idle page tracking.
     scripts/config -d MEM_SOFT_DIRTY -d IDLE_PAGE_TRACKING
+
+    ### Require boot param to enable pressure stall information tracking.
+    scripts/config -e PSI_DEFAULT_DISABLED
 
     ### Disable khugepaged to put read-only file-backed pages in THP.
     scripts/config -d READ_ONLY_THP_FOR_FS
@@ -228,8 +244,14 @@ if [[ $(uname -m) = *"x86"* ]]; then
     ### Disable Watchdog Timer Support.
     scripts/config -d WATCHDOG
 
+    ### Disable PCI Express ASPM L0s and L1, even if the BIOS enabled them.
+    scripts/config -d PCIEASPM_DEFAULT -e PCIEASPM_PERFORMANCE
+
     ### Disable workqueue power-efficient mode by default.
     scripts/config -d WQ_POWER_EFFICIENT_DEFAULT
+
+    ### Set the default state of memory_corruption_check to off.
+    scripts/config -d X86_BOOTPARAM_MEMORY_CORRUPTION_CHECK
 
     ### Disable statistic for Change Page Attribute.
     scripts/config -d X86_CPA_STATISTICS
