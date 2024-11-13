@@ -137,7 +137,6 @@ prepare() {
             # Configure BORE to run efficiently with SCHED_AUTOGROUP enabled.
             # Obey RUN_TO_PARITY instead, for better throughput.
             cat "../$src" | \
-              sed 's/update_deadline(cfs_rq, curr)/update_deadline(cfs_rq, curr, tick)/' | \
               sed 's/\(__read_mostly sched_burst_parity_threshold =\) 2;/\1 0;/' | \
               patch -Np1
             continue
