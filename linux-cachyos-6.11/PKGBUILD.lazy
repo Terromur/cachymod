@@ -272,7 +272,7 @@ prepare() {
     ### Optionally disable DEBUG_INFO related knobs for more kernel trimming
     ### This requires disabling the ananicy-cpp service or will segfault
     if [[ -n "$_disable_debug_info" ]]; then
-        echo "Further kernel trimming. Disabling DEBUG_INFO knobs..."
+        echo "More kernel trimming. Disabling DEBUG_INFO knobs..."
         scripts/config -d GDB_SCRIPTS
         scripts/config -d DEBUG_INFO
         scripts/config -d DEBUG_INFO_BTF
