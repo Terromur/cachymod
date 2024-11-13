@@ -47,7 +47,7 @@ _localmodcfg_path=${_localmodcfg_path-"$HOME/.config/modprobed.db"}
 ### Running with a 1000HZ, 800Hz, 600Hz, or 500Hz tick rate
 _HZ_ticks=${_HZ_ticks-1000}
 
-## Choose between realtime(rt), full(low-latency), or lazy(prefer throughput)
+### Choose between rt(real-time), full(low-latency), or lazy(prefer throughput)
 _preempt=${_preempt-full}
 
 # This does automatically detect your supported CPU and optimizes for it
@@ -59,21 +59,26 @@ _use_auto_optimization=${_use_auto_optimization-y}
 #   ivybridge, haswell, skylake, icelake, tigerlake, alderlake }
 _processor_opt=${_processor_opt-}
 
-_pkgsuffix=cachyos-gcc
+_pkgsuffix=cachyos-612
 pkgbase="linux-$_pkgsuffix"
-if [ "$_preempt" = "realtime" ]; then
+if [ "$_preempt" = "rt" ]; then
     pkgbase="$pkgbase-lazy-rt"
 else
     pkgbase="$pkgbase-lazy"
 fi
 
-_major=6.11
-_minor=7
-pkgver=${_major}.${_minor}
-_stable=${_major}.${_minor}
+_major=6.12
+_minor=0
+#_minorc=$((_minor+1))
+_rcver=rc7
+pkgver=${_major}.${_rcver}
+#_stable=${_major}.${_minor}
+#_stable=${_major}
+_stable=${_major}-${_rcver}
 _srcname=linux-${_stable}
+#_srcname=linux-${_stable}
 pkgdesc='Linux BORE + Lazy Preemption + Cachy Sauce Kernel by CachyOS with other patches and improvements'
-pkgrel=3
+pkgrel=1
 _kernver="$pkgver-$pkgrel"
 _kernuname="${pkgver}-${_pkgsuffix}"
 arch=('x86_64')
@@ -83,36 +88,21 @@ options=('!strip' '!debug' '!lto')
 
 makedepends=(bc cpio gettext libelf pahole perl python tar xz zstd)
 
-_cachyossource="https://raw.githubusercontent.com/cachyos/kernel-patches/master/${_major}"
-_clearmodsource="https://github.com/marioroy/clearmod/raw/refs/heads/main"
-
 source=(
-    "https://cdn.kernel.org/pub/linux/kernel/v${pkgver%%.*}.x/${_srcname}.tar.xz"
+    "https://github.com/torvalds/linux/archive/refs/tags/v${_major}-${_rcver}.tar.gz"
     "config"
     "config.sh"
     "trim.sh"
     "auto-cpu-optimization.sh"
     "mkinitcpio.template"
-    "${_clearmodsource}/patches/0001-linux6.11.2-rt7.patch"
-    "${_clearmodsource}/patches/0001-linux6.11.2-rt7-update1.patch"
+    "0001-preempt-lazy.patch"
     "0001-cachyos-base-all.patch"
     "0001-sched-fair-remove-cachy-mods.patch"
-    "0001-linux6.11.y-bore.patch"
+    "0001-linux6.12.y-bore.patch"
     "0002-change-750hz-to-800hz.patch"
-    "${_clearmodsource}/patches/sched_eevdf_add_features_comments.patch"
-    "${_clearmodsource}/patches/sched_eevdf_allow_shorter_slices_to_wakeup-preempt-rt.patch"
-    "${_clearmodsource}/patches/sched_eevdf_remove_min_vruntime_copy.patch"
-    "${_clearmodsource}/patches/sched_fair_cleanup_pick_task_fair_vs_throttle.patch"
-    "${_clearmodsource}/patches/sched_fair_unify_pick_next_task_fair.patch"
-    "${_clearmodsource}/patches/sched_fair_remove_the_DOUBLE_TICK_feature.patch"
-    "${_clearmodsource}/patches/0001-linux6.11.2-rt7-update2.patch"
-    "${_clearmodsource}/patches/0001-linux6.11.2-rt7-update3.patch"
-    "${_clearmodsource}/patches/0001-linux6.11.2-rt7-update4.patch"
-    "${_clearmodsource}/patches/sched_deadline_use_hrtick_enabled_dl.patch"
     "0100-mm-kconfig-enable-rt-thp.patch"
     "0110-mm-bump-lru-gen-min-ttl.patch"
-    "0200-clearlinux-extras.patch"
-    "0210-xfs-reduce-unneeded-searches.patch")
+    "0200-clearlinux-extras.patch")
 
 # Append extra sources in PKGBUILD.lazy.sh
 [ -n "$_extra_patch_or_url1" ] && source+=("$_extra_patch_or_url1")
@@ -120,6 +110,8 @@ source=(
 [ -n "$_extra_patch_or_url3" ] && source+=("$_extra_patch_or_url3")
 [ -n "$_extra_patch_or_url4" ] && source+=("$_extra_patch_or_url4")
 [ -n "$_extra_patch_or_url5" ] && source+=("$_extra_patch_or_url5")
+
+BUILD_FLAGS=( CC=gcc )
 
 export KBUILD_BUILD_HOST=cachyos
 export KBUILD_BUILD_USER="$pkgbase"
@@ -141,7 +133,7 @@ prepare() {
         src="${src%.zst}"
         [[ $src = *.patch ]] || continue
         echo "Applying patch $src..."
-        if [[ "$src" = *"0001-linux6.11.y-bore.patch" ]]; then
+        if [[ "$src" = *"0001-linux6.12.y-bore.patch" ]]; then
             # Configure BORE to run efficiently with SCHED_AUTOGROUP enabled.
             # Obey RUN_TO_PARITY instead, for better throughput.
             cat "../$src" | \
@@ -191,7 +183,7 @@ prepare() {
 
     case "$_HZ_ticks" in
         1000|800|600|500)
-            scripts/config -d HZ_1000 -d HZ_800 -d HZ_300 -e "HZ_${_HZ_ticks}" --set-val HZ "${_HZ_ticks}";;
+            scripts/config -d HZ_800 -d HZ_300 -e "HZ_${_HZ_ticks}" --set-val HZ "${_HZ_ticks}";;
         *)
             _die "The value $_HZ_ticks is invalid. Choose the correct one again."
     esac
@@ -223,14 +215,17 @@ prepare() {
     [ -z "$_preempt" ] && _die "The value is empty. Choose the correct one again."
 
     case "$_preempt" in
-        realtime)
-            scripts/config -e PREEMPT_BUILD -d PREEMPT_NONE -d PREEMPT_VOLUNTARY -e PREEMPT -d PREEMPT_LAZY -d PREEMPT_LAZIEST -e PREEMPT_COUNT -e PREEMPTION -e PREEMPT_DYNAMIC -e PREEMPT_RT
-            ;;
-        lazy)
-            scripts/config -e PREEMPT_BUILD -d PREEMPT_NONE -d PREEMPT_VOLUNTARY -d PREEMPT -e PREEMPT_LAZY -d PREEMPT_LAZIEST -e PREEMPT_COUNT -e PREEMPTION -e PREEMPT_DYNAMIC -d PREEMPT_RT
+        rt)
+            scripts/config -e PREEMPT_BUILD -d PREEMPT_NONE -d PREEMPT_VOLUNTARY -e PREEMPT -d PREEMPT_LAZY -e PREEMPT_COUNT -e PREEMPTION -e PREEMPT_DYNAMIC -e PREEMPT_RT
             ;;
         full)
-            scripts/config -e PREEMPT_BUILD -d PREEMPT_NONE -d PREEMPT_VOLUNTARY -e PREEMPT -d PREEMPT_LAZY -d PREEMPT_LAZIEST -e PREEMPT_COUNT -e PREEMPTION -e PREEMPT_DYNAMIC -d PREEMPT_RT
+            scripts/config -e PREEMPT_BUILD -d PREEMPT_NONE -d PREEMPT_VOLUNTARY -e PREEMPT -d PREEMPT_LAZY -e PREEMPT_COUNT -e PREEMPTION -e PREEMPT_DYNAMIC -d PREEMPT_RT
+            ;;
+        lazy)
+            scripts/config -e PREEMPT_BUILD -d PREEMPT_NONE -d PREEMPT_VOLUNTARY -d PREEMPT -e PREEMPT_LAZY -e PREEMPT_COUNT -e PREEMPTION -e PREEMPT_DYNAMIC -d PREEMPT_RT
+            ;;
+        voluntary)
+            scripts/config -e PREEMPT_BUILD -d PREEMPT_NONE -e PREEMPT_VOLUNTARY -d PREEMPT -d PREEMPT_LAZY -e PREEMPT_COUNT -e PREEMPTION -e PREEMPT_DYNAMIC -d PREEMPT_RT
             ;;
         *)
             _die "The value '$_preempt' is invalid. Choose the correct one again."
@@ -286,7 +281,7 @@ prepare() {
     yes "" | make "${BUILD_FLAGS[@]}" config >/dev/null
 
     ### Prepared version
-    make -s kernelrelease > version
+    make "${BUILD_FLAGS[@]}" -s kernelrelease > version
     echo "Prepared $pkgbase version $(<version)"
 
     ### Running make nconfig
@@ -338,18 +333,18 @@ _package() {
     echo "Installing boot image..."
     # systemd expects to find the kernel here to allow hibernation
     # https://github.com/systemd/systemd/commit/edda44605f06a41fb86b7ab8128dcf99161d2344
-    install -Dm644 "$(make -s image_name)" "$modulesdir/vmlinuz"
+    install -Dm644 "$(make "${BUILD_FLAGS[@]}" -s image_name)" "$modulesdir/vmlinuz"
 
     # Used by mkinitcpio to name the kernel
     echo "$pkgbase" | install -Dm644 /dev/stdin "$modulesdir/pkgbase"
 
     # Include mkinitcpio preset file, excluding PRESETS 'fallback'
-    [ "$_preempt" = "realtime" ] && flavour="lazy-rt" || flavour="lazy"
+    [ "$_preempt" = "rt" ] && flavour="lazy-rt" || flavour="lazy"
 
     install -Dm644 "${srcdir}/mkinitcpio.template" \
-        "${pkgdir}/etc/mkinitcpio.d/linux-cachyos-gcc-${flavour}.preset"
+        "${pkgdir}/etc/mkinitcpio.d/linux-cachyos-612-${flavour}.preset"
     sed -i "s/__FLAVOUR__/${flavour}/" \
-        "${pkgdir}/etc/mkinitcpio.d/linux-cachyos-gcc-${flavour}.preset"
+        "${pkgdir}/etc/mkinitcpio.d/linux-cachyos-612-${flavour}.preset"
 
     echo "Installing modules..."
     ZSTD_CLEVEL=6 make "${BUILD_FLAGS[@]}" INSTALL_MOD_PATH="$pkgdir/usr" INSTALL_MOD_STRIP=1 \

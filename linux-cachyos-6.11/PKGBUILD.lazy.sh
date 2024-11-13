@@ -43,11 +43,12 @@ export _hugepage="always"
 # Otherwise, the best value is a mystery. If unsure, select 1000.
 export _HZ_ticks="1000"
 
-# Select preempt { full, lazy, realtime }
-# Select "full" for low-latency, matching the CachyOS kernel preemption.
-# Select "lazy" for low-latency, matching the CachyOS RT kernel preemption.
-# Select "realtime" for real preemption, running time-sensitive instruments.
-# Kernel name suffix is "lazy" for full/lazy options; "lazy-rt" for realtime.
+# Select preemption { voluntary, full, lazy, rt }
+# Select "voluntary" for desktop, matching the Clear kernel preemption.
+# Select "full" for low-latency desktop, matching the CachyOS kernel preemption.
+# Select "lazy" for low-latency desktop, matching the CachyOS RT kernel preemption.
+# Select "rt" for real-time preemption, running time-sensitive instruments.
+# Kernel suffix is "lazy" for voluntary/full/lazy options; "lazy-rt" for rt.
 export _preempt="full"
 
 # Use automatic CPU optimization
@@ -76,5 +77,5 @@ export _processor_opt=""
 cp PKGBUILD.lazy PKGBUILD
 
 # Build kernel lazy and lazy-headers packages
-nice -n 15 makepkg -scf --cleanbuild --skipinteg
+time nice -n 15 makepkg -scf --cleanbuild --skipinteg
 

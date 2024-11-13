@@ -20,18 +20,18 @@ sudo pacman -S nvidia-open-dkms
 
 ## Building and Installation
 
-Copy the `linux-cachyos-lazy` folder to a work area with ample storage space,
-and change directory. Adjust build options in `PKGBUILD.lazy.sh`.
-Select `_preempt=realtime` for the realtime kernel.
+Copy a `linux-cachyos-6.11/12` folder to a work area with ample storage space,
+and change directory. Optionally, adjust the build options in `PKGBUILD.lazy.sh`.
+Select `_preempt=rt` for the realtime kernel.
 
 ```bash
 bash PKGBUILD.lazy.sh
 
 # lazy
-sudo pacman -U linux-cachyos-gcc-lazy-{6,h}*.zst
+sudo pacman -U linux-cachyos-611-lazy-{6,h}*.zst
 
 # lazy-rt
-sudo pacman -U linux-cachyos-gcc-lazy-rt*.zst
+sudo pacman -U linux-cachyos-611-lazy-rt*.zst
 ```
 
 Removal is via pacman as well, when no longer needed.
@@ -39,42 +39,70 @@ Removal is via pacman as well, when no longer needed.
 ```text
 # lazy
 sudo pacman -Rsn \
-  linux-cachyos-gcc-lazy \
-  linux-cachyos-gcc-lazy-headers
+  linux-cachyos-611-lazy \
+  linux-cachyos-611-lazy-headers
 
 # lazy-rt
 sudo pacman -Rsn \
-  linux-cachyos-gcc-lazy-rt \
-  linux-cachyos-gcc-lazy-rt-headers
+  linux-cachyos-611-lazy-rt \
+  linux-cachyos-611-lazy-rt-headers
 ```
 
-Optionally, select desired preemption via kernel argument.
+The desired preemption can be specified with a kernel argument.
 For most cases "full" is what you want for low-latency.
 
 ```bash
 # lazy
 preempt=full (default)
 preempt=lazy
-preempt=laziest
 preempt=none
 
 # lazy-rt
 preempt=full (default)
 preempt=lazy
-preempt=laziest
 ```
 
 ## Developer Notes
 
-1. The `PKGBUILD.cachyos` is not used and left it here for comparison.
-   I modified the file and saved to `PKGBUILD.lazy`. The `*.lazy.sh`
-   script creates `PKGBUILD`.
+1. The `PKGBUILD.lazy.sh` script creates the `PKGBUILD` file.
 
-2. This project pulls patch files from the CachyOS and ClearMod GitHub
-   repositories. This may fail in the future when patches no longer align
-   or due to kernel updates. Maybe, I'd include the patches here.
+2. I learned a lot making this project. Here's a tip.
 
-3. Failed to commit transaction (conflicting files). Initally, the package
-   did not own the `/etc/mkinitcpio.d/linux-cachyos-gcc-lazy*.preset` file.
-   Remove the file manually and try again.
+Feel free to copy the `PKGBUILD.lazy.sh` script and name it
+anything you like, and edit that file. I have four depending
+on the type of kernel I want to build. Optionally, add the
+`pacman` command to install the kernel.
+
+```text
+# Fast localmod build including trim.
+mario.fast
+mario.fast-rt
+
+# Same thing, but without localmod.
+mario.lazy
+mario.lazy-rt
+```
+
+3. The 6.12 kernel will not work with the NVIDIA 550xx driver. 
+
+I applied `0004-Fix-for-6.12.0-rc1-drm_mode_config_funcs.output_poll.patch`
+to `/usr/src/nvidia-550.127.05`, and the kernel works well. Ask kindly the
+CachyOS team to include the patch for the 550xx driver.
+
+## LICENSE
+
+```text
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 3 of the License, or
+at your option any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+```
 
