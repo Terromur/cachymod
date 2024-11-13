@@ -1,6 +1,6 @@
 # CachyMod
 
-Run a 6.11 kernel with lazy preemption capability on [CachyOS](https://cachyos.org/).
+Run a 6.11 or 6.12 kernel with lazy preemption capability on [CachyOS](https://cachyos.org/).
 
 If running NVIDIA graphics, first switch to DKMS for future proof CachyOS
 updating the NVIDIA stack to a later release.
