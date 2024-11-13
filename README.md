@@ -53,6 +53,7 @@ For most cases "full" is what you want for low-latency.
 
 ```bash
 # lazy
+preempt=voluntary
 preempt=full (default)
 preempt=lazy
 preempt=none
