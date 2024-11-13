@@ -259,14 +259,29 @@ prepare() {
 
     ### Run the config.sh script for kernel tuning
     if [[ -s "${srcdir}"/config.sh ]]; then
-        echo "Further kernel customization..."
+        echo "Further kernel customization. Running config.sh script..."
         bash "${srcdir}"/config.sh
     fi
 
     ### Optionally run the trim.sh script to trim the kernel
     if [[ -n "$_runtrim_script" && -s "${srcdir}"/trim.sh ]]; then
-        echo "Further kernel trimming..."
+        echo "Further kernel trimming. Running trim.sh script..."
         bash "${srcdir}"/trim.sh
+    fi
+
+    ### Optionally disable DEBUG_INFO related knobs for more kernel trimming
+    ### This requires disabling the ananicy-cpp service or will segfault
+    if [[ -n "$_disable_debug_info" ]]; then
+        echo "Further kernel trimming. Disabling DEBUG_INFO knobs..."
+        scripts/config -d GDB_SCRIPTS
+        scripts/config -d DEBUG_INFO
+        scripts/config -d DEBUG_INFO_BTF
+        scripts/config -d DEBUG_INFO_BTF_MODULES
+        scripts/config -d DEBUG_INFO_DWARF_TOOLCHAIN_DEFAULT
+        scripts/config -d DEBUG_INFO_DWARF4
+        scripts/config -d DEBUG_INFO_DWARF5
+        scripts/config -e DEBUG_INFO_NONE
+        scripts/config -d PAHOLE_HAS_SPLIT_BTF
     fi
 
     ### Optionally load needed modules for the make localmodconfig
@@ -310,8 +325,10 @@ build() {
 
     make "${BUILD_FLAGS[@]}" -j"$ncpu" all | \
        grep -Ev '^  (AS|AR|CC|LD|BT|CE|CO|GE|HO|IN|MK|OB|PA|PE|PO|RE|ST|TA|TE|UN|UP|VD|X32)'
-    make -C tools/bpf/bpftool vmlinux.h feature-clang-bpf-co-re=1 | \
-       grep -Ev '^  (AS|AR|CC|LD|BT|CE|CO|GE|HO|IN|MK|OB|PA|PE|PO|RE|ST|TA|TE|UN|UP|VD|X32)'
+    if [[ -z "$_disable_debug_info" ]]; then
+       make -C tools/bpf/bpftool vmlinux.h feature-clang-bpf-co-re=1 | \
+          grep -Ev '^  (AS|AR|CC|LD|BT|CE|CO|GE|HO|IN|MK|OB|PA|PE|PO|RE|ST|TA|TE|UN|UP|VD|X32)'
+    fi
 
     local MODULE_FLAGS=(
        KERNEL_UNAME="${_kernuname}"
@@ -367,8 +384,13 @@ _package-headers() {
     local builddir="$pkgdir/usr/lib/modules/$(<version)/build"
 
     echo "Installing build files..."
-    install -Dt "$builddir" -m644 .config Makefile Module.symvers System.map \
-        localversion.* version vmlinux tools/bpf/bpftool/vmlinux.h
+    if [[ -z "$_disable_debug_info" ]]; then
+        install -Dt "$builddir" -m644 .config Makefile Module.symvers System.map \
+            localversion.* version vmlinux tools/bpf/bpftool/vmlinux.h
+    else
+        install -Dt "$builddir" -m644 .config Makefile Module.symvers System.map \
+            localversion.* version vmlinux
+    fi
     install -Dt "$builddir/kernel" -m644 kernel/Makefile
     install -Dt "$builddir/arch/x86" -m644 arch/x86/Makefile
     cp -t "$builddir" -a scripts
