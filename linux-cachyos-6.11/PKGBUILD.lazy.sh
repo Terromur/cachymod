@@ -12,11 +12,6 @@ set -e
 # To deselect ~ 1,500 kernel options
 export _runtrim_script=""
 
-# Disable DEBUG_INFO related knobs for more kernel trimming.
-# This requires disabling the ananicy-cpp service or will segfault.
-# I.e sudo systemctl disable --now ananicy-cpp.service
-export _disable_debug_info=""
-
 # Compile ONLY used modules to VASTLY reduce the number of modules built
 # and the build time. Refer to the wiki page for more information.
 # https://wiki.archlinux.org/index.php/Modprobed-db
