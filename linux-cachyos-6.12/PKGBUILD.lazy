@@ -78,7 +78,7 @@ _stable=${_major}-${_rcver}
 _srcname=linux-${_stable}
 #_srcname=linux-${_stable}
 pkgdesc='Linux BORE + Lazy Preemption + Cachy Sauce Kernel by CachyOS with other patches and improvements'
-pkgrel=2
+pkgrel=3
 _kernver="$pkgver-$pkgrel"
 _kernuname="${pkgver}-${_pkgsuffix}"
 arch=('x86_64')
@@ -263,6 +263,27 @@ prepare() {
         bash "${srcdir}"/trim.sh
     fi
 
+    ### Optionally disable DEBUG_INFO related knobs for more kernel trimming
+    ### BPF will not work, used by all sorts of stuff including firewall
+    ### This requires disabling the ananicy-cpp service or will segfault
+    ### Hence, if you do not use these things, want to save time building,
+    ### and unlikely to decode a stack trace later
+    if [[ -n "$_disable_debug_info" ]]; then
+        echo "More kernel trimming. Disabling DEBUG_INFO knobs..."
+        scripts/config -d GDB_SCRIPTS
+        scripts/config -d DEBUG_INFO
+        scripts/config -d DEBUG_INFO_BTF
+        scripts/config -d DEBUG_INFO_BTF_MODULES
+        scripts/config -d DEBUG_INFO_DWARF_TOOLCHAIN_DEFAULT
+        scripts/config -d DEBUG_INFO_DWARF4
+        scripts/config -d DEBUG_INFO_DWARF5
+        scripts/config -e DEBUG_INFO_NONE
+        scripts/config -d PAHOLE_HAS_SPLIT_BTF
+        # Remove the BPF (Berkeley Packet Filter) from the list
+        # CONFIG_LSM="landlock,lockdown,yama,integrity,bpf"
+        scripts/config --set-str LSM "landlock,lockdown,yama,integrity"
+    fi
+
     ### Optionally load needed modules for the make localmodconfig
     # See https://aur.archlinux.org/packages/modprobed-db
     if [[ -n "$_localmodcfg" ]]; then
@@ -304,8 +325,10 @@ build() {
 
     make "${BUILD_FLAGS[@]}" -j"$ncpu" all | \
        grep -Ev '^  (AS|AR|CC|LD|BT|CE|CO|GE|HO|IN|MK|OB|PA|PE|PO|RE|ST|TA|TE|UN|UP|VD|X32)'
-    make -C tools/bpf/bpftool vmlinux.h feature-clang-bpf-co-re=1 | \
-       grep -Ev '^  (AS|AR|CC|LD|BT|CE|CO|GE|HO|IN|MK|OB|PA|PE|PO|RE|ST|TA|TE|UN|UP|VD|X32)'
+    if [[ -z "$_disable_debug_info" ]]; then
+       make -C tools/bpf/bpftool vmlinux.h feature-clang-bpf-co-re=1 | \
+          grep -Ev '^  (AS|AR|CC|LD|BT|CE|CO|GE|HO|IN|MK|OB|PA|PE|PO|RE|ST|TA|TE|UN|UP|VD|X32)'
+    fi
 
     local MODULE_FLAGS=(
        KERNEL_UNAME="${_kernuname}"
@@ -361,8 +384,13 @@ _package-headers() {
     local builddir="$pkgdir/usr/lib/modules/$(<version)/build"
 
     echo "Installing build files..."
-    install -Dt "$builddir" -m644 .config Makefile Module.symvers System.map \
-        localversion.* version vmlinux tools/bpf/bpftool/vmlinux.h
+    if [[ -z "$_disable_debug_info" ]]; then
+        install -Dt "$builddir" -m644 .config Makefile Module.symvers System.map \
+            localversion.* version vmlinux tools/bpf/bpftool/vmlinux.h
+    else
+        install -Dt "$builddir" -m644 .config Makefile Module.symvers System.map \
+            localversion.* version vmlinux
+    fi
     install -Dt "$builddir/kernel" -m644 kernel/Makefile
     install -Dt "$builddir/arch/x86" -m644 arch/x86/Makefile
     cp -t "$builddir" -a scripts

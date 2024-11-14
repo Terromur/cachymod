@@ -12,6 +12,14 @@ set -e
 # To deselect ~ 1,500 kernel options
 export _runtrim_script=""
 
+# Disable DEBUG_INFO related knobs for more kernel trimming.
+# BPF will not work, used by all sorts of stuff including firewall.
+# This requires disabling the ananicy-cpp service or will segfault.
+# i.e sudo systemctl disable --now ananicy-cpp.service
+# Hence, if you do not use these things, want to save time building,
+# and unlikely to decode a stack trace later.
+export _disable_debug_info=""
+
 # Compile ONLY used modules to VASTLY reduce the number of modules built
 # and the build time. Refer to the wiki page for more information.
 # https://wiki.archlinux.org/index.php/Modprobed-db
