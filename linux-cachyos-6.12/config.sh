@@ -59,12 +59,9 @@ scripts/config -d SCSI_UFS_HWMON
 scripts/config -d SENSORS_IIO_HWMON
 
 ### Disable tracers.
-scripts/config -d TASKS_RUDE_RCU
 scripts/config -d ATH5K_TRACER
-scripts/config -d CONTEXT_SWITCH_TRACER
 scripts/config -d DM_UEVENT
 scripts/config -d FUNCTION_PROFILER
-scripts/config -d FUNCTION_TRACER
 scripts/config -d FTRACE_RECORD_RECURSION
 scripts/config -d FTRACE_SORT_STARTUP_TEST
 scripts/config -d FTRACE_VALIDATE_RCU_IS_WATCHING
