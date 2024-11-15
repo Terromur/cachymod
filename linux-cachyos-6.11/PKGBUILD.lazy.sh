@@ -13,12 +13,17 @@ set -e
 export _runtrim_script=""
 
 # Disable DEBUG_INFO related knobs for more kernel trimming.
-# BPF will not work, used by all sorts of stuff including firewall.
+# BPF and SCX will not work, used by all sorts of stuff including firewall.
 # This requires disabling the ananicy-cpp service or will segfault.
 # i.e sudo systemctl disable --now ananicy-cpp.service
 # Hence, if you do not use these things, want to save time building,
 # and unlikely to decode a stack trace later.
 export _disable_debug_info=""
+
+# Enable sched_ext (SCX) scheduler (overrides _disable_debug_info).
+# The _disable_debug_info build option is ignored.
+# This option is ignored for real-time preemption.
+export _enable_sched_ext=""
 
 # Compile ONLY used modules to VASTLY reduce the number of modules built
 # and the build time. Refer to the wiki page for more information.
@@ -56,6 +61,7 @@ export _HZ_ticks="1000"
 # Select "full" for low-latency desktop, matching the CachyOS kernel preemption.
 # Select "lazy" for low-latency desktop, matching the CachyOS RT kernel preemption.
 # Select "rt" for real-time preemption, running time-sensitive instruments.
+# The _enable_sched_ext build option is ignored for real-time preemption.
 # Kernel suffix is "lazy" for voluntary/full/lazy options; "lazy-rt" for rt.
 export _preempt="full"
 

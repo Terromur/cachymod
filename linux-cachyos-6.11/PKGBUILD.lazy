@@ -73,7 +73,7 @@ pkgver=${_major}.${_minor}
 _stable=${_major}.${_minor}
 _srcname=linux-${_stable}
 pkgdesc='Linux BORE + Lazy Preemption + Cachy Sauce Kernel by CachyOS with other patches and improvements'
-pkgrel=1
+pkgrel=2
 _kernver="$pkgver-$pkgrel"
 _kernuname="${pkgver}-${_pkgsuffix}"
 arch=('x86_64')
@@ -108,7 +108,8 @@ source=(
     "0100-mm-kconfig-enable-rt-thp.patch"
     "0110-mm-bump-lru-gen-min-ttl.patch"
     "0200-clearlinux-extras.patch"
-    "0210-xfs-reduce-unneeded-searches.patch")
+    "0210-xfs-reduce-unneeded-searches.patch"
+    "0001-sched-ext.patch")
 
 # Append extra sources in PKGBUILD.lazy.sh
 [ -n "$_extra_patch_or_url1" ] && source+=("$_extra_patch_or_url1")
@@ -152,6 +153,14 @@ prepare() {
             # The patch sets min_ttl_ms to 2000. Skip for 600Hz/1.6(6)ms.
             continue
         fi
+        if [[ "$src" = *"0001-sched-ext.patch" && -z "$_enable_sched_ext" ]]; then
+            # Skip unless selected.
+            continue
+        fi
+        if [[ "$src" = *"0001-sched-ext.patch" && "$_preempt" = "rt" ]]; then
+            # The sched_ext (SCX) does not work with realtime preemption.
+            continue
+        fi
         patch -Np1 < "../$src"
     done
 
@@ -185,6 +194,14 @@ prepare() {
     ### Enable the BORE CPU scheduler
     echo "Enabling BORE CPU scheduler..."
     scripts/config -e SCHED_BORE
+
+    ### Enable sched_ext scheduler
+    if [[ -n "$_enable_sched_ext" && "$_preempt" != "rt" ]]; then
+        echo "Enabling the sched_ext (SCX) scheduler..."
+        scripts/config -e SCHED_CLASS_EXT
+    else
+        scripts/config -d SCHED_CLASS_EXT
+    fi
 
     ### Select tick rate
     [ -z "$_HZ_ticks" ] && _die "The value is empty. Choose the correct one again."
@@ -270,11 +287,11 @@ prepare() {
     fi
 
     ### Optionally disable DEBUG_INFO related knobs for more kernel trimming
-    ### BPF will not work, used by all sorts of stuff including firewall
+    ### BPF and SCX will not work, used by all sorts of stuff including firewall
     ### This requires disabling the ananicy-cpp service or will segfault
     ### Hence, if you do not use these things, want to save time building,
     ### and unlikely to decode a stack trace later
-    if [[ -n "$_disable_debug_info" ]]; then
+    if [[ -n "$_disable_debug_info" && -z "$_enable_sched_ext" ]]; then
         echo "More kernel trimming. Disabling DEBUG_INFO knobs..."
         scripts/config -d GDB_SCRIPTS
         scripts/config -d DEBUG_INFO
@@ -284,6 +301,7 @@ prepare() {
         scripts/config -d DEBUG_INFO_DWARF4
         scripts/config -d DEBUG_INFO_DWARF5
         scripts/config -e DEBUG_INFO_NONE
+        scripts/config -d FTRACE
         scripts/config -d PAHOLE_HAS_SPLIT_BTF
         # Remove the BPF (Berkeley Packet Filter) from the list
         # CONFIG_LSM="landlock,lockdown,yama,integrity,bpf"
@@ -346,7 +364,8 @@ build() {
 
 _package() {
     pkgdesc="The $pkgdesc kernel and modules"
-    depends=('coreutils' 'kmod' 'initramfs' 'scx-scheds')
+    depends=('coreutils' 'kmod' 'initramfs')
+    [ -n "$_enable_sched_ext" ] && depends+=('scx-scheds')
     optdepends=('wireless-regdb: to set the correct wireless channels of your country'
                 'linux-firmware: firmware images needed for some devices'
                 'modprobed-db: Keeps track of EVERY kernel module that has ever been probed - useful for those of us who make localmodconfig'
