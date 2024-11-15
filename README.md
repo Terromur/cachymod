@@ -86,7 +86,7 @@ mario.lazy-rt
 
 3. The 6.12 kernel will not work with the NVIDIA 550xx driver. 
 
-I applied `0004-Fix-for-6.12.0-rc1-drm_mode_config_funcs.output_poll.patch`
+I applied `0006-nvidia-drm-Set-FOP_UNSIGNED_OFFSET-for-nv_drm_fops.f.patch`
 to `/usr/src/nvidia-550.127.05`, and the kernel works well. Ask kindly the
 CachyOS team to include the patch for the 550xx driver.
 
