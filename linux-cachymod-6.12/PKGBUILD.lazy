@@ -90,16 +90,12 @@ fi
 
 _major=6.12
 _minor=0
-#_minorc=$((_minor+1))
-_rcver=rc7
-pkgver=${_major}.${_rcver}
+pkgver=${_major}.${_minor}
 #_stable=${_major}.${_minor}
-#_stable=${_major}
-_stable=${_major}-${_rcver}
+_stable=${_major}
 _srcname=linux-${_stable}
-#_srcname=linux-${_stable}
 pkgdesc='Linux BORE + Lazy Preemption + Cachy Sauce Kernel by CachyOS with other patches and improvements'
-pkgrel=5
+pkgrel=1
 _kernver="$pkgver-$pkgrel"
 _kernuname="${pkgver}-${_pkgsuffix}"
 arch=('x86_64')
@@ -110,12 +106,13 @@ options=('!strip' '!debug' '!lto')
 makedepends=(bc cpio gettext libelf pahole perl python tar xz zstd)
 
 source=(
-    "https://github.com/torvalds/linux/archive/refs/tags/v${_major}-${_rcver}.tar.gz"
+    "https://cdn.kernel.org/pub/linux/kernel/v${pkgver%%.*}.x/${_srcname}.tar.xz"
     "config"
     "config.sh"
     "trim.sh"
     "auto-cpu-optimization.sh"
     "mkinitcpio.template"
+    "0001-rt.patch"
     "0001-preempt-lazy.patch"
     "0001-cachyos-base-all.patch"
     "0001-sched-fair-remove-cachy-mods.patch"
@@ -160,6 +157,10 @@ prepare() {
         src="${src##*/}"
         src="${src%.zst}"
         [[ $src = *.patch ]] || continue
+        if [[ "$src" = *"0001-rt.patch" && "$_preempt" != "rt" ]]; then
+            # Skip unless building a kernel with real-time preemption.
+            continue
+        fi
         if [[ "$src" = *"0110-mm-bump-lru-gen-min-ttl.patch" && "$_HZ_ticks" = "600" ]]; then
             # The patch sets min_ttl_ms to 2000. Skip for 600Hz/1.6(6)ms.
             continue
