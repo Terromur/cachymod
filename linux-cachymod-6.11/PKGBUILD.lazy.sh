@@ -56,6 +56,11 @@ export _hugepage="always"
 # Otherwise, the best value is a mystery. If unsure, select 1000.
 export _HZ_ticks="1000"
 
+# Select tickless type { full, idle }
+# Full tickless can give higher performances in various cases but, depending on
+# hardware, lower consistency. Idle (without rcu_nocb_cpu) may reduce stutters.
+export _ticktype="full"
+
 # Select preemption { voluntary, full, lazy, rt }
 # Select "voluntary" for desktop, matching the Clear kernel preemption.
 # Select "full" for low-latency desktop, matching the CachyOS kernel preemption.
@@ -73,6 +78,14 @@ export _use_auto_optimization="y"
 #   generic_v1, generic_v2, generic_v3, generic_v4, sandybridge,
 #   ivybridge, haswell, skylake, icelake, tigerlake, alderlake }
 export _processor_opt=""
+
+# Select LLVM level { full, thin, none }
+# full: Uses 1 thread for linking, slow and uses more memory (>14GB),
+#       theoretically with the highest performance gains
+# thin: Uses multiple threads, faster and lesser memory consumption,
+#       possibly lower runtime performance than full
+# none: Disable LTO
+export _use_llvm_lto="none"
 
 # Add extra sources here: opt-in/uncomment for the USB pollrate patch
 # Refer to https://github.com/GloriousEggroll/Linux-Pollrate-Patch

@@ -96,6 +96,8 @@ scripts/config -d PM_SLEEP_DEBUG
 scripts/config -d PM_TRACE_RTC
 scripts/config -d LATENCYTOP
 scripts/config -d LEDS_TRIGGER_CPU
+scripts/config -d LEDS_TRIGGER_GPIO
+scripts/config -d MEMTEST
 scripts/config -d PCIEAER_INJECT
 scripts/config -d GENERIC_IRQ_DEBUGFS
 scripts/config -d GENERIC_IRQ_INJECTION
@@ -285,7 +287,10 @@ if [[ $(uname -m) = *"x86"* ]]; then
     ### Disable utilization clamping for RT/FAIR tasks.
     scripts/config -d UCLAMP_TASK
 
-    ### Disable the RDMA controller.
+    ### Disable CGROUP controllers.
+    scripts/config -d CGROUP_HUGETLB
+    scripts/config -d CGROUP_NET_PRIO
+    scripts/config -d CGROUP_PERF
     scripts/config -d CGROUP_RDMA
 
     ### Disable support for latency based cgroup IO protection.
@@ -296,6 +301,9 @@ if [[ $(uname -m) = *"x86"* ]]; then
 
     ### Disable cgroup I/O controller for assigning an I/O priority class.
     scripts/config -d BLK_CGROUP_IOPRIO
+
+    ### Disable netfilter "control group" match support.
+    scripts/config -d NETFILTER_XT_MATCH_CGROUP
 
     ### Default to the 2:1 compression allocator (zbud) as the default allocator.
     scripts/config -d ZSWAP_DEFAULT_ON -d ZSWAP_SHRINKER_DEFAULT_ON

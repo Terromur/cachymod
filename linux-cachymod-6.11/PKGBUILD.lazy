@@ -47,6 +47,11 @@ _localmodcfg_path=${_localmodcfg_path-"$HOME/.config/modprobed.db"}
 ### Running with a 1000HZ, 800Hz, 600Hz, or 500Hz tick rate
 _HZ_ticks=${_HZ_ticks-1000}
 
+### Choose between full or idle tickless type
+### Full tickless can give higher performances in various cases but, depending on
+### hardware, lower consistency. Idle (without rcu_nocb_cpu) may reduce stutters.
+_ticktype=${_ticktype-full}
+
 ### Choose between rt(real-time), full(low-latency), or lazy(prefer throughput)
 _preempt=${_preempt-full}
 
@@ -59,26 +64,37 @@ _use_auto_optimization=${_use_auto_optimization-y}
 #   ivybridge, haswell, skylake, icelake, tigerlake, alderlake }
 _processor_opt=${_processor_opt-}
 
-_pkgsuffix=cachyos-612
-pkgbase="linux-$_pkgsuffix"
-if [ "$_preempt" = "rt" ]; then
-    pkgbase="$pkgbase-lazy-rt"
+# Clang LTO mode, only available with the "llvm" compiler.
+# ATTENTION - one of three predefined values should be selected!
+# full: Uses 1 thread for Linking, slow and uses more memory (>14GB),
+#       theoretically with the highest performance gains.
+# thin: Uses multiple threads, faster and uses less memory,
+#       may have a lower runtime performance than Full.
+# none: Disable LTO.
+_use_llvm_lto=${_use_llvm_lto-none}
+
+_pkgsuffix=cachymod-611
+
+if [[ "$_use_llvm_lto" = "thin" || "$_use_llvm_lto" = "full" ]]; then
+    buildtype="lto"
 else
-    pkgbase="$pkgbase-lazy"
+    buildtype="gcc"
 fi
 
-_major=6.12
-_minor=0
-#_minorc=$((_minor+1))
-_rcver=rc7
-pkgver=${_major}.${_rcver}
-#_stable=${_major}.${_minor}
-#_stable=${_major}
-_stable=${_major}-${_rcver}
+pkgbase="linux-$_pkgsuffix"
+if [ "$_preempt" = "rt" ]; then
+    pkgbase="${pkgbase}-${buildtype}-rt"
+else
+    pkgbase="${pkgbase}-${buildtype}"
+fi
+
+_major=6.11
+_minor=9
+pkgver=${_major}.${_minor}
+_stable=${_major}.${_minor}
 _srcname=linux-${_stable}
-#_srcname=linux-${_stable}
 pkgdesc='Linux BORE + Lazy Preemption + Cachy Sauce Kernel by CachyOS with other patches and improvements'
-pkgrel=4
+pkgrel=1
 _kernver="$pkgver-$pkgrel"
 _kernuname="${pkgver}-${_pkgsuffix}"
 arch=('x86_64')
@@ -89,20 +105,41 @@ options=('!strip' '!debug' '!lto')
 makedepends=(bc cpio gettext libelf pahole perl python tar xz zstd)
 
 source=(
-    "https://github.com/torvalds/linux/archive/refs/tags/v${_major}-${_rcver}.tar.gz"
+    "https://cdn.kernel.org/pub/linux/kernel/v${pkgver%%.*}.x/${_srcname}.tar.xz"
     "config"
     "config.sh"
     "trim.sh"
     "auto-cpu-optimization.sh"
     "mkinitcpio.template"
-    "0001-preempt-lazy.patch"
+    "0001-linux6.11.2-rt7.patch"
+    "0001-linux6.11.2-rt7-update1.patch"
     "0001-cachyos-base-all.patch"
     "0001-sched-fair-remove-cachy-mods.patch"
-    "0001-linux6.12.y-bore.patch"
+    "0001-linux6.11.y-bore.patch"
     "0002-change-750hz-to-800hz.patch"
+    "0003-deadline-use-hrtick-enabled-dl.patch"
+    "0003-eevdf-add-features-comments.patch"
+    "0003-eevdf-allow-shorter-slices-to.patch"
+    "0003-eevdf-remove-min-vruntime-copy.patch"
+    "0003-fair-cleanup-pick-task-fair.patch"
+    "0003-fair-unify-pick-next-task-fair.patch"
+    "0004-linux6.11.2-rt7-update2.patch"
+    "0004-linux6.11.2-rt7-update3.patch"
+    "0004-linux6.11.2-rt7-update4.patch"
     "0100-mm-kconfig-enable-rt-thp.patch"
     "0110-mm-bump-lru-gen-min-ttl.patch"
-    "0200-clearlinux-extras.patch")
+    "0200-clearlinux-extras.patch"
+    "0210-xfs-reduce-unneeded-searches.patch"
+    "0001-sched-ext.patch")
+
+# LLVM makedepends
+if [[ "$_use_llvm_lto" = "thin" || "$_use_llvm_lto" = "full" ]]; then
+    makedepends+=( clang llvm lld )
+    source+=("dkms-clang.patch")
+    BUILD_FLAGS=( CC=clang LD=ld.lld LLVM=1 LLVM_IAS=1 )
+else
+    BUILD_FLAGS=( CC=gcc )
+fi
 
 # Append extra sources in PKGBUILD.lazy.sh
 [ -n "$_extra_patch_or_url1" ] && source+=("$_extra_patch_or_url1")
@@ -110,8 +147,6 @@ source=(
 [ -n "$_extra_patch_or_url3" ] && source+=("$_extra_patch_or_url3")
 [ -n "$_extra_patch_or_url4" ] && source+=("$_extra_patch_or_url4")
 [ -n "$_extra_patch_or_url5" ] && source+=("$_extra_patch_or_url5")
-
-BUILD_FLAGS=( CC=gcc )
 
 export KBUILD_BUILD_HOST=cachyos
 export KBUILD_BUILD_USER="$pkgbase"
@@ -132,21 +167,32 @@ prepare() {
         src="${src##*/}"
         src="${src%.zst}"
         [[ $src = *.patch ]] || continue
-        echo "Applying patch $src..."
-        if [[ "$src" = *"0001-linux6.12.y-bore.patch" ]]; then
-            # Configure BORE to run efficiently with SCHED_AUTOGROUP enabled.
-            # Obey RUN_TO_PARITY instead, for better throughput.
-            cat "../$src" | \
-              sed 's/\(__read_mostly sched_burst_parity_threshold =\) 2;/\1 0;/' | \
-              patch -Np1
-            continue
-        fi
         if [[ "$src" = *"0110-mm-bump-lru-gen-min-ttl.patch" && "$_HZ_ticks" = "600" ]]; then
             # The patch sets min_ttl_ms to 2000. Skip for 600Hz/1.6(6)ms.
             continue
         fi
+        if [[ "$src" = *"0001-sched-ext"* && -z "$_enable_sched_ext" ]]; then
+            # Skip unless selected.
+            continue
+        fi
+        if [[ "$src" = *"0001-sched-ext"* && "$_preempt" = "rt" ]]; then
+            # The sched_ext (SCX) does not work with realtime preemption.
+            continue
+        fi
+        echo "Applying patch $src..."
+        if [[ "$src" = *"0001-linux6.11.y-bore.patch" ]]; then
+            # Configure BORE to run efficiently with SCHED_AUTOGROUP enabled.
+            # Obey RUN_TO_PARITY instead, for better throughput.
+            cat "../$src" | \
+              sed 's/update_deadline(cfs_rq, curr)/update_deadline(cfs_rq, curr, tick)/' | \
+              sed 's/\(__read_mostly sched_burst_parity_threshold =\) 2;/\1 0;/' | \
+              patch -Np1
+            continue
+        fi
         patch -Np1 < "../$src"
     done
+
+    rm -f localversion-rt
 
     echo "Setting config..."
     cp ../config .config
@@ -185,6 +231,25 @@ prepare() {
         scripts/config -d SCHED_CLASS_EXT
     fi
 
+    ### Select LLVM level
+    [ -z "$_use_llvm_lto" ] && _die "The value is empty. Choose the correct one again."
+
+    case "$_use_llvm_lto" in
+        thin)
+            scripts/config -e LTO -e LTO_CLANG -e ARCH_SUPPORTS_LTO_CLANG -e ARCH_SUPPORTS_LTO_CLANG_THIN -d LTO_NONE -e HAS_LTO_CLANG -d LTO_CLANG_FULL -e LTO_CLANG_THIN -e HAVE_GCC_PLUGINS
+            ;;
+        full)
+            scripts/config -e LTO -e LTO_CLANG -e ARCH_SUPPORTS_LTO_CLANG -e ARCH_SUPPORTS_LTO_CLANG_THIN -d LTO_NONE -e HAS_LTO_CLANG -e LTO_CLANG_FULL -d LTO_CLANG_THIN -e HAVE_GCC_PLUGINS
+            ;;
+        none)
+            scripts/config -e LTO_NONE
+            ;;
+        *)
+            _die "The value '$_use_llvm_lto' is invalid. Choose the correct one again."
+    esac
+
+    echo "Selecting '$_use_llvm_lto' LLVM level..."
+
     ### Select tick rate
     [ -z "$_HZ_ticks" ] && _die "The value is empty. Choose the correct one again."
 
@@ -215,28 +280,38 @@ prepare() {
             -d NUMA_BALANCING_DEFAULT_ENABLED
     fi
 
-    echo "Setting 'full' tick type..."
-    scripts/config -d HZ_PERIODIC -d NO_HZ_IDLE -d CONTEXT_TRACKING_FORCE -e NO_HZ_FULL_NODEF -e NO_HZ_FULL -e NO_HZ -e NO_HZ_COMMON -e CONTEXT_TRACKING
+    ### Select tickless type
+    [ -z "$_ticktype" ] && _die "The value is empty. Choose the correct one again."
+
+    case "$_ticktype" in
+        full)
+            scripts/config -d HZ_PERIODIC -d NO_HZ_IDLE -d CONTEXT_TRACKING_FORCE -e NO_HZ_FULL_NODEF -e NO_HZ_FULL -e NO_HZ -e NO_HZ_COMMON -e CONTEXT_TRACKING
+            ;;
+        idle)
+            scripts/config -d HZ_PERIODIC -d NO_HZ_FULL -e NO_HZ_IDLE -e NO_HZ -e NO_HZ_COMMON
+            scripts/config -d RCU_NOCB_CPU -d TICK_CPU_ACCOUNTING -e VIRT_CPU_ACCOUNTING_GEN
+            ;;
+        *)
+            _die "The value '$_ticktype' is invalid. Choose the correct one again."
+    esac
+
+    echo "Selecting '$_ticktype' tickless type..."
 
     ### Select preempt type
     [ -z "$_preempt" ] && _die "The value is empty. Choose the correct one again."
 
     case "$_preempt" in
         rt)
-            scripts/config -e PREEMPT_BUILD -d PREEMPT_NONE -d PREEMPT_VOLUNTARY -e PREEMPT -d PREEMPT_LAZY -e PREEMPT_COUNT -e PREEMPTION -e PREEMPT_DYNAMIC -e PREEMPT_RT
-            ;;
-        full)
-            scripts/config -e PREEMPT_BUILD -d PREEMPT_NONE -d PREEMPT_VOLUNTARY -e PREEMPT -d PREEMPT_LAZY -e PREEMPT_COUNT -e PREEMPTION -e PREEMPT_DYNAMIC -d PREEMPT_RT
+            scripts/config -e PREEMPT_BUILD -d PREEMPT_NONE -d PREEMPT_VOLUNTARY -e PREEMPT -d PREEMPT_LAZY -d PREEMPT_LAZIEST -e PREEMPT_COUNT -e PREEMPTION -e PREEMPT_DYNAMIC -e PREEMPT_RT
             ;;
         lazy)
-            scripts/config -e PREEMPT_BUILD -d PREEMPT_NONE -d PREEMPT_VOLUNTARY -d PREEMPT -e PREEMPT_LAZY -e PREEMPT_COUNT -e PREEMPTION -e PREEMPT_DYNAMIC -d PREEMPT_RT
+            scripts/config -e PREEMPT_BUILD -d PREEMPT_NONE -d PREEMPT_VOLUNTARY -d PREEMPT -e PREEMPT_LAZY -d PREEMPT_LAZIEST -e PREEMPT_COUNT -e PREEMPTION -e PREEMPT_DYNAMIC -d PREEMPT_RT
             ;;
-        voluntary)
-            scripts/config -e PREEMPT_BUILD -d PREEMPT_NONE -e PREEMPT_VOLUNTARY -d PREEMPT -d PREEMPT_LAZY -e PREEMPT_COUNT -e PREEMPTION -e PREEMPT_DYNAMIC -d PREEMPT_RT
+        full)
+            scripts/config -e PREEMPT_BUILD -d PREEMPT_NONE -d PREEMPT_VOLUNTARY -e PREEMPT -d PREEMPT_LAZY -d PREEMPT_LAZIEST -e PREEMPT_COUNT -e PREEMPTION -e PREEMPT_DYNAMIC -d PREEMPT_RT
             ;;
         *)
             _die "The value '$_preempt' is invalid. Choose the correct one again."
-            ;;
     esac
 
     echo "Selecting '$_preempt' preempt type..."
@@ -371,12 +446,12 @@ _package() {
     echo "$pkgbase" | install -Dm644 /dev/stdin "$modulesdir/pkgbase"
 
     # Include mkinitcpio preset file, excluding PRESETS 'fallback'
-    [ "$_preempt" = "rt" ] && flavour="lazy-rt" || flavour="lazy"
+    [ "$_preempt" = "rt" ] && flavour="${buildtype}-rt" || flavour="${buildtype}"
 
     install -Dm644 "${srcdir}/mkinitcpio.template" \
-        "${pkgdir}/etc/mkinitcpio.d/linux-cachyos-612-${flavour}.preset"
+        "${pkgdir}/etc/mkinitcpio.d/linux-cachymod-611-${flavour}.preset"
     sed -i "s/__FLAVOUR__/${flavour}/" \
-        "${pkgdir}/etc/mkinitcpio.d/linux-cachyos-612-${flavour}.preset"
+        "${pkgdir}/etc/mkinitcpio.d/linux-cachymod-611-${flavour}.preset"
 
     echo "Installing modules..."
     ZSTD_CLEVEL=6 make "${BUILD_FLAGS[@]}" INSTALL_MOD_PATH="$pkgdir/usr" INSTALL_MOD_STRIP=1 \

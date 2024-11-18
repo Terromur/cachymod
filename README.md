@@ -20,7 +20,7 @@ sudo pacman -S nvidia-open-dkms
 
 ## Building and Installation
 
-Copy a `linux-cachyos-6.11/12` folder to a work area with ample storage space,
+Copy a `linux-cachymod-6.11/12` folder to a work area with ample storage space,
 and change directory. Optionally, adjust the build options in `PKGBUILD.lazy.sh`.
 Select `_preempt=rt` for the realtime kernel.
 
@@ -28,24 +28,28 @@ Select `_preempt=rt` for the realtime kernel.
 bash PKGBUILD.lazy.sh
 
 # lazy
-sudo pacman -U linux-cachyos-611-lazy-{6,h}*.zst
+sudo pacman -U linux-cachymod-611-gcc-{6,h}*.zst
+sudo pacman -U linux-cachymod-611-lto-{6,h}*.zst
 
 # lazy-rt
-sudo pacman -U linux-cachyos-611-lazy-rt*.zst
+sudo pacman -U linux-cachymod-611-gcc-rt*.zst
+sudo pacman -U linux-cachymod-611-lto-rt*.zst
 ```
 
-Removal is via pacman as well, when no longer needed.
+Removal is via pacman as well. Change the kernel version and
+build type accordingly to { 611, 612 } and { gcc, lto },
+respectively.
 
 ```text
 # lazy
 sudo pacman -Rsn \
-  linux-cachyos-611-lazy \
-  linux-cachyos-611-lazy-headers
+  linux-cachymod-611-gcc \
+  linux-cachymod-611-gcc-headers
 
 # lazy-rt
 sudo pacman -Rsn \
-  linux-cachyos-611-lazy-rt \
-  linux-cachyos-611-lazy-rt-headers
+  linux-cachymod-611-gcc-rt \
+  linux-cachymod-611-gcc-rt-headers
 ```
 
 The desired preemption can be specified with a kernel argument.
