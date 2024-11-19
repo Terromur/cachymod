@@ -75,10 +75,7 @@ scripts/config -d OSNOISE_TRACER
 scripts/config -d PM_DEVFREQ_EVENT
 scripts/config -d PREEMPT_TRACER
 scripts/config -d PSTORE_FTRACE
-scripts/config -d REGULATOR_NETLINK_EVENTS
 scripts/config -d SCHED_TRACER
-scripts/config -d STACKTRACE_BUILD_ID
-scripts/config -d STACK_TRACER
 scripts/config -d TIMERLAT_TRACER
 scripts/config -d SYNTH_EVENTS
 scripts/config -d USER_EVENTS
