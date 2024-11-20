@@ -79,13 +79,16 @@ export _use_auto_optimization="y"
 #   ivybridge, haswell, skylake, icelake, tigerlake, alderlake }
 export _processor_opt=""
 
-# Select LLVM level { full, thin, none }
-# full: Uses 1 thread for linking, slow and uses more memory (>14GB),
-#       theoretically with the highest performance gains
-# thin: Uses multiple threads, faster and lesser memory consumption,
-#       possibly lower runtime performance than full
-# none: Disable LTO
-export _use_llvm_lto="none"
+# Select build type { full, thin, clang, gcc }
+# full:  Build the kernel with clang (full LTO), suffix "-lto"
+#        Uses 1 thread for linking, slow and uses more memory (>14GB),
+#        theoretically with the highest performance gains
+# thin:  Build the kernel with clang (thin LTO), suffix "-lto"
+#        Uses multiple threads, faster and lesser memory consumption,
+#        possibly lower runtime performance than full
+# clang: Build the kernel with clang (no LTO), suffix "-clang"
+# gcc:   Build the kernel with gcc, suffix "-gcc"
+export _buildtype="gcc"
 
 # Add extra sources here: opt-in/uncomment for the USB pollrate patch
 # Refer to https://github.com/GloriousEggroll/Linux-Pollrate-Patch

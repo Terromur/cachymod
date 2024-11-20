@@ -64,21 +64,23 @@ _use_auto_optimization=${_use_auto_optimization-y}
 #   ivybridge, haswell, skylake, icelake, tigerlake, alderlake }
 _processor_opt=${_processor_opt-}
 
-# Clang LTO mode, only available with the "llvm" compiler.
-# ATTENTION - one of three predefined values should be selected!
-# full: Uses 1 thread for Linking, slow and uses more memory (>14GB),
-#       theoretically with the highest performance gains.
-# thin: Uses multiple threads, faster and uses less memory,
-#       may have a lower runtime performance than Full.
-# none: Disable LTO.
-_use_llvm_lto=${_use_llvm_lto-none}
+# Select build type { full, thin, clang, gcc }
+# full:  Build the kernel with clang (full LTO), suffix "-lto"
+#        Uses 1 thread for linking, slow and uses more memory (>14GB),
+#        theoretically with the highest performance gains
+# thin:  Build the kernel with clang (thin LTO), suffix "-lto"
+#        Uses multiple threads, faster and lesser memory consumption,
+#        possibly lower runtime performance than full
+# clang: Build the kernel with clang (no LTO), suffix "-clang"
+# gcc:   Build the kernel with gcc, suffix "-gcc"
+_buildtype=${_buildtype-gcc}
 
 _pkgsuffix=cachymod-612
 
-if [[ "$_use_llvm_lto" = "thin" || "$_use_llvm_lto" = "full" ]]; then
+if [[ "$_buildtype" = "thin" || "$_buildtype" = "full" ]]; then
     buildtype="lto"
 else
-    buildtype="gcc"
+    buildtype="$_buildtype"
 fi
 
 pkgbase="linux-$_pkgsuffix"
@@ -95,7 +97,7 @@ pkgver=${_major}.${_minor}
 _stable=${_major}
 _srcname=linux-${_stable}
 pkgdesc='Linux BORE + Lazy Preemption + Cachy Sauce Kernel by CachyOS with other patches and improvements'
-pkgrel=2
+pkgrel=3
 _kernver="$pkgver-$pkgrel"
 _kernuname="${pkgver}-${_pkgsuffix}"
 arch=('x86_64')
@@ -123,7 +125,7 @@ source=(
     "0200-clearlinux-extras.patch")
 
 # LLVM makedepends
-if [[ "$_use_llvm_lto" = "thin" || "$_use_llvm_lto" = "full" ]]; then
+if [[ "$buildtype" = "lto" || "$buildtype" = "clang" ]]; then
     makedepends+=( clang llvm lld )
     source+=("dkms-clang.patch")
     BUILD_FLAGS=( CC=clang LD=ld.lld LLVM=1 LLVM_IAS=1 )
@@ -214,24 +216,28 @@ prepare() {
         scripts/config -d SCHED_CLASS_EXT
     fi
 
-    ### Select LLVM level
-    [ -z "$_use_llvm_lto" ] && _die "The value is empty. Choose the correct one again."
+    ### Select build type
+    [ -z "$_buildtype" ] && _die "The value is empty. Choose the correct one again."
 
-    case "$_use_llvm_lto" in
+    case "$_buildtype" in
         thin)
             scripts/config -e LTO -e LTO_CLANG -e ARCH_SUPPORTS_LTO_CLANG -e ARCH_SUPPORTS_LTO_CLANG_THIN -d LTO_NONE -e HAS_LTO_CLANG -d LTO_CLANG_FULL -e LTO_CLANG_THIN -e HAVE_GCC_PLUGINS
             ;;
         full)
             scripts/config -e LTO -e LTO_CLANG -e ARCH_SUPPORTS_LTO_CLANG -e ARCH_SUPPORTS_LTO_CLANG_THIN -d LTO_NONE -e HAS_LTO_CLANG -e LTO_CLANG_FULL -d LTO_CLANG_THIN -e HAVE_GCC_PLUGINS
             ;;
-        none)
+        clang | gcc)
             scripts/config -e LTO_NONE
             ;;
         *)
-            _die "The value '$_use_llvm_lto' is invalid. Choose the correct one again."
+            _die "The value '$_buildtype' is invalid. Choose the correct one again."
     esac
 
-    echo "Selecting '$_use_llvm_lto' LLVM level..."
+    if [ "$buildtype" = "lto" ]; then
+        echo "Selecting 'clang' compiler, '$_buildtype' LLVM level..."
+    else
+        echo "Selecting '$_buildtype' compiler, no LTO..."
+    fi
 
     ### Select tick rate
     [ -z "$_HZ_ticks" ] && _die "The value is empty. Choose the correct one again."
