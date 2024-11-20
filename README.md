@@ -28,16 +28,18 @@ Select `_preempt=rt` for the realtime kernel.
 bash PKGBUILD.lazy.sh
 
 # lazy
-sudo pacman -U linux-cachymod-611-gcc-{6,h}*.zst
 sudo pacman -U linux-cachymod-611-lto-{6,h}*.zst
+sudo pacman -U linux-cachymod-611-clang-{6,h}*.zst
+sudo pacman -U linux-cachymod-611-gcc-{6,h}*.zst
 
 # lazy-rt
-sudo pacman -U linux-cachymod-611-gcc-rt*.zst
 sudo pacman -U linux-cachymod-611-lto-rt*.zst
+sudo pacman -U linux-cachymod-611-clang-rt*.zst
+sudo pacman -U linux-cachymod-611-gcc-rt*.zst
 ```
 
 Removal is via pacman as well. Change the kernel version and
-build type accordingly to { 611, 612 } and { gcc, lto },
+build type accordingly to { 611, 612 } and { lto, clang, gcc },
 respectively.
 
 ```text
