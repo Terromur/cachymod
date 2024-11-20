@@ -223,7 +223,8 @@ if [[ $(uname -m) = *"x86"* ]]; then
     ### Disable khugepaged to put read-only file-backed pages in THP.
     scripts/config -d READ_ONLY_THP_FOR_FS
 
-    ### Force all function address 64B aligned.
+    ### Force all function address 64B aligned. This requires patch in
+    ### 0200 to remove the depends on EXPERT check.
     scripts/config -e DEBUG_FORCE_FUNCTION_ALIGN_64B
 
     ### Disable heap memory zeroing on allocation by default.
@@ -301,6 +302,14 @@ if [[ $(uname -m) = *"x86"* ]]; then
 
     ### Disable netfilter "control group" match support.
     scripts/config -d NETFILTER_XT_MATCH_CGROUP
+
+    ### Apply Clear defaults for NR_CPUS and NODES_SHIFT.
+    scripts/config -d CPUMASK_OFFSTACK -d MAXSMP
+    scripts/config --set-val NR_CPUS_RANGE_BEGIN 2
+    scripts/config --set-val NR_CPUS_RANGE_END 512
+    scripts/config --set-val NR_CPUS_DEFAULT 64
+    scripts/config --set-val NR_CPUS 512
+    scripts/config --set-val NODES_SHIFT 10
 
     ### Default to the 2:1 compression allocator (zbud) as the default allocator.
     scripts/config -d ZSWAP_DEFAULT_ON -d ZSWAP_SHRINKER_DEFAULT_ON
