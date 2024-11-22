@@ -34,6 +34,7 @@ scripts/config -e HID_APPLE -e HID_BELKIN -e HID_CHERRY -e HID_CHICONY
 scripts/config -e HID_GENERIC -e HID_HOLTEK -e HID_KENSINGTON -e HID_LENOVO
 scripts/config -e HID_LOGITECH -e HID_LOGITECH_DJ -e HID_LOGITECH_HIDPP
 scripts/config -e HID_MICROSOFT -e HID_SAMSUNG -e HID_VIVALDI
+scripts/config -e SERIO_GPIO_PS2 -e SERIO_SERPORT
 
 ### Enable storage modules. (default -m)
 scripts/config -e NVME_KEYRING -e NVME_AUTH -e NVME_CORE
