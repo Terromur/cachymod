@@ -91,7 +91,7 @@ else
 fi
 
 _major=6.12
-_minor=1
+_minor=2
 pkgver=${_major}.${_minor}
 _stable=${_major}.${_minor}
 _srcname=linux-${_stable}
@@ -117,6 +117,7 @@ source=(
     "0001-preempt-lazy.patch"
     "0001-cachyos-base-all.patch"
     "0001-sched-fair-remove-cachy-mods.patch"
+    "0001-sched-fair-updates.patch"
     "0001-linux6.12.y-bore.patch"
     "0002-change-750hz-to-800hz.patch"
     "0100-mm-kconfig-enable-rt-thp.patch"
@@ -158,23 +159,15 @@ prepare() {
         src="${src##*/}"
         src="${src%.zst}"
         [[ $src = *.patch ]] || continue
-        if [[ "$src" = *"0001-rt.patch" && "$_preempt" != "rt" ]]; then
-            # Skip unless building a kernel with real-time preemption.
-            continue
-        fi
+      # if [[ "$src" = *"0001-rt.patch" && "$_preempt" != "rt" ]]; then
+      #     # Skip unless building a kernel with real-time preemption.
+      #     continue
+      # fi
         if [[ "$src" = *"0110-mm-bump-lru-gen-min-ttl.patch" && "$_HZ_ticks" = "600" ]]; then
             # The patch sets min_ttl_ms to 2000. Skip for 600Hz/1.6(6)ms.
             continue
         fi
         echo "Applying patch $src..."
-        if [[ "$src" = *"0001-linux6.12.y-bore.patch" ]]; then
-            # Configure BORE to run efficiently with SCHED_AUTOGROUP enabled.
-            # Obey RUN_TO_PARITY instead, for better throughput.
-            cat "../$src" | \
-              sed 's/\(__read_mostly sched_burst_parity_threshold =\) 2;/\1 0;/' | \
-              patch -Np1
-            continue
-        fi
         patch -Np1 < "../$src"
     done
 
@@ -399,7 +392,7 @@ build() {
     [[ -z "$ncpu" || "$ncpu" = "MAKEFLAGS"* ]] && ncpu=$(nproc)
 
     make "${BUILD_FLAGS[@]}" -j"$ncpu" all | \
-       grep -Ev '^  (AS|AR|CC|LD|BT|CE|CO|GE|HO|IN|MK|OB|PA|PE|PO|RE|ST|TA|TE|UN|UP|VD|X32)'
+       grep -Ev '^  (AS|AR|CC|LD|BT|CE|CO|GE|HO|IN|IP|MK|OB|PA|PE|PO|RE|ST|TA|TE|UN|UP|VD|X32)'
     if [[ -z "$_disable_debug_info" ]]; then
        make -C tools/bpf/bpftool vmlinux.h feature-clang-bpf-co-re=1 | \
           grep -Ev '^  (AS|AR|CC|LD|BT|CE|CO|GE|HO|IN|MK|OB|PA|PE|PO|RE|ST|TA|TE|UN|UP|VD|X32)'

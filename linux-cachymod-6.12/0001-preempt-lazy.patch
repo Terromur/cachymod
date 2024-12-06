@@ -16,14 +16,13 @@ Signed-off-by: Peter Jung <admin@ptr1337.dev>
  kernel/Kconfig.preempt             |  25 +++++--
  kernel/entry/common.c              |   2 +-
  kernel/entry/kvm.c                 |   4 +-
- kernel/rcu/srcutiny.c              |   2 +-
  kernel/sched/core.c                | 112 +++++++++++++++++++++++++----
  kernel/sched/debug.c               |   7 +-
  kernel/sched/fair.c                |   6 +-
  kernel/sched/sched.h               |   1 +
  kernel/trace/trace.c               |   2 +
  kernel/trace/trace_output.c        |  16 ++++-
- 18 files changed, 186 insertions(+), 46 deletions(-)
+ 17 files changed, 185 insertions(+), 45 deletions(-)
 
 diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
 index 89b8fc452a7c..b7316721ebf2 100644
@@ -330,20 +329,6 @@ index 2e0f75bcb7fd..8485f63863af 100644
  	return 0;
  }
  
-diff --git a/kernel/rcu/srcutiny.c b/kernel/rcu/srcutiny.c
-index 549c03336ee9..4dcbf8aa80ff 100644
---- a/kernel/rcu/srcutiny.c
-+++ b/kernel/rcu/srcutiny.c
-@@ -122,8 +122,8 @@ void srcu_drive_gp(struct work_struct *wp)
- 	ssp = container_of(wp, struct srcu_struct, srcu_work);
- 	preempt_disable();  // Needed for PREEMPT_AUTO
- 	if (ssp->srcu_gp_running || ULONG_CMP_GE(ssp->srcu_idx, READ_ONCE(ssp->srcu_idx_max))) {
--		return; /* Already running or nothing to do. */
- 		preempt_enable();
-+		return; /* Already running or nothing to do. */
- 	}
- 
- 	/* Remove recently arrived callbacks and wait for readers. */
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
 index b35752fdbcc0..a1b01cd25e6d 100644
 --- a/kernel/sched/core.c

@@ -1,0 +1,192 @@
+# https://lore.kernel.org/all/20241129161756.3081386-7-vincent.guittot@linaro.org/
+
+From: Vincent Guittot <vincent.guittot@linaro.org>
+To: mingo@redhat.com, peterz@infradead.org, juri.lelli@redhat.com,
+	dietmar.eggemann@arm.com, rostedt@goodmis.org,
+	bsegall@google.com, mgorman@suse.de, vschneid@redhat.com,
+	linux-kernel@vger.kernel.org
+Cc: kprateek.nayak@amd.com, pauld@redhat.com, efault@gmx.de,
+	luis.machado@arm.com,
+	Vincent Guittot <vincent.guittot@linaro.org>
+Subject: [PATCH 06/10 v2] sched/fair: Remove unused cfs_rq.idle_nr_running
+Date: Fri, 29 Nov 2024 17:17:52 +0100	[thread overview]
+Message-ID: <20241129161756.3081386-7-vincent.guittot@linaro.org> (raw)
+In-Reply-To: <20241129161756.3081386-1-vincent.guittot@linaro.org>
+
+cfs_rq.idle_nr_running field is not used anywhere so we can remove the
+useless associated computation
+
+Signed-off-by: Vincent Guittot <vincent.guittot@linaro.org>
+---
+ kernel/sched/debug.c |  2 --
+ kernel/sched/fair.c  | 14 +-------------
+ kernel/sched/sched.h |  1 -
+ 3 files changed, 1 insertion(+), 16 deletions(-)
+
+diff --git a/kernel/sched/debug.c b/kernel/sched/debug.c
+index 867e1102c368..37ccba0bedf5 100644
+--- a/kernel/sched/debug.c
++++ b/kernel/sched/debug.c
+@@ -846,8 +846,6 @@ void print_cfs_rq(struct seq_file *m, int cpu, struct cfs_rq *cfs_rq)
+ 	SEQ_printf(m, "  .%-30s: %Ld.%06ld\n", "spread", SPLIT_NS(spread));
+ 	SEQ_printf(m, "  .%-30s: %d\n", "nr_running", cfs_rq->nr_running);
+ 	SEQ_printf(m, "  .%-30s: %d\n", "h_nr_running", cfs_rq->h_nr_running);
+-	SEQ_printf(m, "  .%-30s: %d\n", "idle_nr_running",
+-			cfs_rq->idle_nr_running);
+ 	SEQ_printf(m, "  .%-30s: %d\n", "idle_h_nr_running",
+ 			cfs_rq->idle_h_nr_running);
+ 	SEQ_printf(m, "  .%-30s: %ld\n", "load", cfs_rq->load.weight);
+diff --git a/kernel/sched/fair.c b/kernel/sched/fair.c
+index 13ee5ea13580..20fe55e95882 100644
+--- a/kernel/sched/fair.c
++++ b/kernel/sched/fair.c
+@@ -3674,8 +3674,6 @@ account_entity_enqueue(struct cfs_rq *cfs_rq, struct sched_entity *se)
+ 	}
+ #endif
+ 	cfs_rq->nr_running++;
+-	if (se_is_idle(se))
+-		cfs_rq->idle_nr_running++;
+ }
+ 
+ static void
+@@ -3689,8 +3687,6 @@ account_entity_dequeue(struct cfs_rq *cfs_rq, struct sched_entity *se)
+ 	}
+ #endif
+ 	cfs_rq->nr_running--;
+-	if (se_is_idle(se))
+-		cfs_rq->idle_nr_running--;
+ }
+ 
+ /*
+@@ -13523,7 +13519,7 @@ int sched_group_set_idle(struct task_group *tg, long idle)
+ 	for_each_possible_cpu(i) {
+ 		struct rq *rq = cpu_rq(i);
+ 		struct sched_entity *se = tg->se[i];
+-		struct cfs_rq *parent_cfs_rq, *grp_cfs_rq = tg->cfs_rq[i];
++		struct cfs_rq *grp_cfs_rq = tg->cfs_rq[i];
+ 		bool was_idle = cfs_rq_is_idle(grp_cfs_rq);
+ 		long idle_task_delta;
+ 		struct rq_flags rf;
+@@ -13534,14 +13530,6 @@ int sched_group_set_idle(struct task_group *tg, long idle)
+ 		if (WARN_ON_ONCE(was_idle == cfs_rq_is_idle(grp_cfs_rq)))
+ 			goto next_cpu;
+ 
+-		if (se->on_rq) {
+-			parent_cfs_rq = cfs_rq_of(se);
+-			if (cfs_rq_is_idle(grp_cfs_rq))
+-				parent_cfs_rq->idle_nr_running++;
+-			else
+-				parent_cfs_rq->idle_nr_running--;
+-		}
+-
+ 		idle_task_delta = grp_cfs_rq->h_nr_running -
+ 				  grp_cfs_rq->idle_h_nr_running;
+ 		if (!cfs_rq_is_idle(grp_cfs_rq))
+diff --git a/kernel/sched/sched.h b/kernel/sched/sched.h
+index 8c57da1af378..7ece69b0fc14 100644
+--- a/kernel/sched/sched.h
++++ b/kernel/sched/sched.h
+@@ -648,7 +648,6 @@ struct cfs_rq {
+ 	struct load_weight	load;
+ 	unsigned int		nr_running;
+ 	unsigned int		h_nr_running;      /* SCHED_{NORMAL,BATCH,IDLE} */
+-	unsigned int		idle_nr_running;   /* SCHED_IDLE */
+ 	unsigned int		idle_h_nr_running; /* SCHED_IDLE */
+ 
+ 	s64			avg_vruntime;
+-- 
+2.43.0
+
+# https://lore.kernel.org/all/20241129161756.3081386-9-vincent.guittot@linaro.org/
+
+From: Vincent Guittot <vincent.guittot@linaro.org>
+To: mingo@redhat.com, peterz@infradead.org, juri.lelli@redhat.com,
+	dietmar.eggemann@arm.com, rostedt@goodmis.org,
+	bsegall@google.com, mgorman@suse.de, vschneid@redhat.com,
+	linux-kernel@vger.kernel.org
+Cc: kprateek.nayak@amd.com, pauld@redhat.com, efault@gmx.de,
+	luis.machado@arm.com,
+	Vincent Guittot <vincent.guittot@linaro.org>
+Subject: [PATCH 08/10 v2] sched/fair: Do not try to migrate delayed dequeue task
+Date: Fri, 29 Nov 2024 17:17:54 +0100	[thread overview]
+Message-ID: <20241129161756.3081386-9-vincent.guittot@linaro.org> (raw)
+In-Reply-To: <20241129161756.3081386-1-vincent.guittot@linaro.org>
+
+Migrating a delayed dequeued task doesn't help in balancing the number
+of runnable tasks in the system.
+
+Signed-off-by: Vincent Guittot <vincent.guittot@linaro.org>
+---
+ kernel/sched/fair.c | 12 ++++++++----
+ 1 file changed, 8 insertions(+), 4 deletions(-)
+
+diff --git a/kernel/sched/fair.c b/kernel/sched/fair.c
+index dc9725da033e..c34874203da2 100644
+--- a/kernel/sched/fair.c
++++ b/kernel/sched/fair.c
+@@ -9394,11 +9394,15 @@ int can_migrate_task(struct task_struct *p, struct lb_env *env)
+ 
+ 	/*
+ 	 * We do not migrate tasks that are:
+-	 * 1) throttled_lb_pair, or
+-	 * 2) cannot be migrated to this CPU due to cpus_ptr, or
+-	 * 3) running (obviously), or
+-	 * 4) are cache-hot on their current CPU.
++	 * 1) delayed dequeued unless we migrate load, or
++	 * 2) throttled_lb_pair, or
++	 * 3) cannot be migrated to this CPU due to cpus_ptr, or
++	 * 4) running (obviously), or
++	 * 5) are cache-hot on their current CPU.
+ 	 */
++	if ((p->se.sched_delayed) && (env->migration_type != migrate_load))
++		return 0;
++
+ 	if (throttled_lb_pair(task_group(p), env->src_cpu, env->dst_cpu))
+ 		return 0;
+ 
+-- 
+2.43.0
+
+# https://lore.kernel.org/all/20241129161756.3081386-10-vincent.guittot@linaro.org/
+
+From: Vincent Guittot <vincent.guittot@linaro.org>
+To: mingo@redhat.com, peterz@infradead.org, juri.lelli@redhat.com,
+	dietmar.eggemann@arm.com, rostedt@goodmis.org,
+	bsegall@google.com, mgorman@suse.de, vschneid@redhat.com,
+	linux-kernel@vger.kernel.org
+Cc: kprateek.nayak@amd.com, pauld@redhat.com, efault@gmx.de,
+	luis.machado@arm.com,
+	Vincent Guittot <vincent.guittot@linaro.org>
+Subject: [PATCH 09/10 v2] sched/fair: Fix sched_can_stop_tick() for fair tasks
+Date: Fri, 29 Nov 2024 17:17:55 +0100	[thread overview]
+Message-ID: <20241129161756.3081386-10-vincent.guittot@linaro.org> (raw)
+In-Reply-To: <20241129161756.3081386-1-vincent.guittot@linaro.org>
+
+We can't stop the tick of a rq if there are at least 2 tasks enqueued in
+the whole hierarchy and not only at the root cfs rq.
+
+rq->cfs.nr_running tracks the number of sched_entity at one level
+whereas rq->cfs.h_nr_running tracks all enqueued tasks in the
+hierarchy.
+
+Signed-off-by: Vincent Guittot <vincent.guittot@linaro.org>
+---
+ kernel/sched/core.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/kernel/sched/core.c b/kernel/sched/core.c
+index 3571f91d4b0d..866a1605656c 100644
+--- a/kernel/sched/core.c
++++ b/kernel/sched/core.c
+@@ -1341,7 +1341,7 @@ bool sched_can_stop_tick(struct rq *rq)
+ 	if (scx_enabled() && !scx_can_stop_tick(rq))
+ 		return false;
+ 
+-	if (rq->cfs.nr_running > 1)
++	if (rq->cfs.h_nr_running > 1)
+ 		return false;
+ 
+ 	/*
+-- 
+2.43.0
+

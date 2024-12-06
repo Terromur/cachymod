@@ -48,6 +48,9 @@ scripts/config -d MSDOS_FS -e FAT_FS -e VFAT_FS
 scripts/config -e EXT4_FS -e FS_MBCACHE -e JBD2
 scripts/config -e BTRFS_FS -e F2FS_FS -e XFS_FS
 
+### Enable NT synchronization primitive emulation.
+scripts/config -e NTSYNC
+
 ### Default HugeTLB Vmemmap Optimization (HVO) to on. It can be disabled via
 ### hugetlb_free_vmemmap=off (cmdline) or vm.hugetlb_optimize_vmemmap (sysctl).
 scripts/config -e HUGETLB_PAGE_OPTIMIZE_VMEMMAP_DEFAULT_ON
@@ -232,6 +235,12 @@ if [[ $(uname -m) = *"x86"* ]]; then
     ### Instead, enable register zeroing on function exit.
     scripts/config -d INIT_ON_ALLOC_DEFAULT_ON
     scripts/config -e ZERO_CALL_USED_REGS
+
+    ### Disable Integrity Policy Enforcement (IPE).
+    scripts/config -d SECURITY_IPE
+
+    ### Disable support for userspace-controlled virtual timers.
+    scripts/config -d SND_UTIMER
 
     ### Disable the general notification queue.
     scripts/config -d WATCH_QUEUE
