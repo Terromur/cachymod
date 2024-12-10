@@ -96,7 +96,7 @@ pkgver=${_major}.${_minor}
 _stable=${_major}.${_minor}
 _srcname=linux-${_stable}
 pkgdesc='Linux BORE + Lazy Preemption + Cachy Sauce Kernel by CachyOS with other patches and improvements'
-pkgrel=2
+pkgrel=3
 _kernver="$pkgver-$pkgrel"
 _kernuname="${pkgver}-${_pkgsuffix}"
 arch=('x86_64')
@@ -129,7 +129,6 @@ source=(
     "0004-linux6.11.2-rt7-update2.patch"
     "0004-linux6.11.2-rt7-update4.patch"
     "0100-mm-kconfig-enable-rt-thp.patch"
-    "0110-mm-bump-lru-gen-min-ttl.patch"
     "0200-clearlinux-extras.patch"
     "0210-xfs-reduce-unneeded-searches.patch"
     "0001-sched-ext.patch")
@@ -169,10 +168,6 @@ prepare() {
         src="${src##*/}"
         src="${src%.zst}"
         [[ $src = *.patch ]] || continue
-        if [[ "$src" = *"0110-mm-bump-lru-gen-min-ttl.patch" && "$_HZ_ticks" = "600" ]]; then
-            # The patch sets min_ttl_ms to 2000. Skip for 600Hz/1.6(6)ms.
-            continue
-        fi
         if [[ "$src" = *"0001-sched-ext"* && -z "$_enable_sched_ext" ]]; then
             # Skip unless selected.
             continue
