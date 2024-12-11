@@ -21,7 +21,7 @@ diff -uarp a/kernel/sched/bore.c b/kernel/sched/bore.c
  
  static void reset_task_weights_bore(void) {
  	struct task_struct *task;
-@@ -148,12 +148,9 @@ int sched_bore_update_handler(const stru
+@@ -148,13 +148,19 @@ int sched_bore_update_handler(const stru
  	return 0;
  }
  
@@ -30,14 +30,23 @@ diff -uarp a/kernel/sched/bore.c b/kernel/sched/bore.c
 -	u32 cnt = 0;
 -	list_for_each_entry(child, &p->children, sibling) {cnt++;}
 -	return cnt;
--}
++static inline size_t list_count_nodes_safe(struct list_head *head) {
++	struct list_head *pos, *tmp;
++	size_t count = 0;
++
++	list_for_each_safe(pos, tmp, head) count++;
++
++	return count;
+ }
+ 
 +#define for_each_child(p, t) \
 +	list_for_each_entry_rcu(t, &(p)->children, sibling, \
 +		lockdep_is_held(&tasklist_lock))
- 
++
  static inline bool burst_cache_expired(struct sched_burst_cache *bc, u64 now)
  {return (s64)(bc->timestamp + sched_burst_cache_lifetime - now) < 0;}
-@@ -170,7 +167,7 @@ static inline void update_child_burst_di
+ 
+@@ -170,7 +176,7 @@ static inline void update_child_burst_di
  	u32 cnt = 0, sum = 0;
  	struct task_struct *child;
  
@@ -46,17 +55,19 @@ diff -uarp a/kernel/sched/bore.c b/kernel/sched/bore.c
  		if (!task_is_bore_eligible(child)) continue;
  		cnt++;
  		sum += child->se.burst_penalty;
-@@ -192,13 +189,14 @@ static void update_child_burst_topologic
+@@ -192,13 +198,16 @@ static void update_child_burst_topologic
  	u32 cnt = 0, dcnt = 0, sum = 0;
  	struct task_struct *child, *dec;
  
 -	list_for_each_entry(child, &p->children, sibling) {
 +	for_each_child(p, child) {
++		if (!task_is_bore_eligible(child)) continue;
  		dec = child;
 -		while ((dcnt = count_child_tasks(dec)) == 1)
 -			dec = list_first_entry(&dec->children, struct task_struct, sibling);
 -		
-+		while (dec && !dec->exit_state && (dcnt = list_count_nodes(&dec->children)) == 1)
++
++		while (dec && (dcnt = list_count_nodes_safe(&dec->children)) == 1)
 +			dec = list_first_or_null_rcu(&dec->children, struct task_struct, sibling);
 +
 +		if (!task_is_bore_eligible(dec)) continue;
@@ -66,12 +77,12 @@ diff -uarp a/kernel/sched/bore.c b/kernel/sched/bore.c
  			cnt++;
  			sum += dec->se.burst_penalty;
  			continue;
-@@ -220,7 +218,7 @@ static inline u8 inherit_burst_topologic
+@@ -220,7 +229,7 @@ static inline u8 inherit_burst_topologic
  	struct task_struct *anc = p;
  	u32 cnt = 0, sum = 0;
  
 -	while (anc->real_parent != anc && count_child_tasks(anc) == 1)
-+	while (anc->real_parent != anc && list_count_nodes(&anc->children) == 1)
++	while (anc->real_parent != anc && list_count_nodes_safe(&anc->children) == 1)
  		anc = anc->real_parent;
  
  	if (burst_cache_expired(&anc->se.child_burst, now))
