@@ -96,7 +96,7 @@ pkgver=${_major}.${_minor}
 _stable=${_major}.${_minor}
 _srcname=linux-${_stable}
 pkgdesc='Linux BORE + Lazy Preemption + Cachy Sauce Kernel by CachyOS with other patches and improvements'
-pkgrel=1
+pkgrel=2
 _kernver="$pkgver-$pkgrel"
 _kernuname="${pkgver}-${_pkgsuffix}"
 arch=('x86_64')
@@ -118,7 +118,7 @@ source=(
     "0001-cachyos-base-all.patch"
     "0001-sched-fair-remove-cachy-mods.patch"
     "0001-linux6.12.y-bore.patch"
-    "0001-linux6.12.y-borelite.patch"
+    "0001-linux6.12.y-bore-update.patch"
     "0002-change-750hz-to-800hz.patch"
     "0100-mm-kconfig-enable-rt-thp.patch"
     "0200-clearlinux-extras.patch")
