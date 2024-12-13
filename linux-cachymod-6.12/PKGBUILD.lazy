@@ -64,13 +64,14 @@ _use_auto_optimization=${_use_auto_optimization-y}
 #   ivybridge, haswell, skylake, icelake, tigerlake, alderlake }
 _processor_opt=${_processor_opt-}
 
-# Select build type { full, thin, clang, gcc }
+# Select build type { full, thin, polly, clang, gcc }
 # full:  Build the kernel with clang (full LTO), suffix "-lto"
 #        Uses 1 thread for linking, slow and uses more memory (>14GB),
 #        theoretically with the highest performance gains
 # thin:  Build the kernel with clang (thin LTO), suffix "-lto"
 #        Uses multiple threads, faster and lesser memory consumption,
 #        possibly lower runtime performance than full
+# polly: Build the kernel with clang polyhedral loop optimizer, suffix "-polly"
 # clang: Build the kernel with clang (no LTO), suffix "-clang"
 # gcc:   Build the kernel with gcc, suffix "-gcc"
 _buildtype=${_buildtype-gcc}
@@ -96,7 +97,7 @@ pkgver=${_major}.${_minor}
 _stable=${_major}.${_minor}
 _srcname=linux-${_stable}
 pkgdesc='Linux BORE + Lazy Preemption + Cachy Sauce Kernel by CachyOS with other patches and improvements'
-pkgrel=4
+pkgrel=5
 _kernver="$pkgver-$pkgrel"
 _kernuname="${pkgver}-${_pkgsuffix}"
 arch=('x86_64')
@@ -128,6 +129,10 @@ if [[ "$buildtype" = "lto" || "$buildtype" = "clang" ]]; then
     makedepends+=( clang llvm lld )
     source+=("dkms-clang.patch")
     BUILD_FLAGS=( CC=clang LD=ld.lld LLVM=1 LLVM_IAS=1 )
+elif [[ "$buildtype" = "polly" ]]; then
+    makedepends+=( clang llvm lld polly )
+    source+=("dkms-clang.patch" "polly.patch")
+    BUILD_FLAGS=( CC="clang -fplugin=LLVMPolly.so" LD=ld.lld LLVM=1 LLVM_IAS=1 )
 else
     BUILD_FLAGS=( CC=gcc )
 fi
@@ -213,6 +218,9 @@ prepare() {
         full)
             scripts/config -e LTO -e LTO_CLANG -e ARCH_SUPPORTS_LTO_CLANG -e ARCH_SUPPORTS_LTO_CLANG_THIN -d LTO_NONE -e HAS_LTO_CLANG -e LTO_CLANG_FULL -d LTO_CLANG_THIN -e HAVE_GCC_PLUGINS
             ;;
+        polly)
+            scripts/config -e POLLY_CLANG
+            ;;
         clang | gcc)
             scripts/config -e LTO_NONE
             ;;
@@ -222,6 +230,8 @@ prepare() {
 
     if [ "$buildtype" = "lto" ]; then
         echo "Selecting 'clang' compiler, '$_buildtype' LLVM level..."
+    elif [ "$buildtype" = "polly" ]; then
+        echo "Selecting 'clang' compiler, '$_buildtype' optimizations..."
     else
         echo "Selecting '$_buildtype' compiler, no LTO..."
     fi

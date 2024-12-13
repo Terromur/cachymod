@@ -79,13 +79,14 @@ export _use_auto_optimization="y"
 #   ivybridge, haswell, skylake, icelake, tigerlake, alderlake }
 export _processor_opt=""
 
-# Select build type { full, thin, clang, gcc }
+# Select build type { full, thin, polly, clang, gcc }
 # full:  Build the kernel with clang (full LTO), suffix "-lto"
 #        Uses 1 thread for linking, slow and uses more memory (>14GB),
 #        theoretically with the highest performance gains
 # thin:  Build the kernel with clang (thin LTO), suffix "-lto"
 #        Uses multiple threads, faster and lesser memory consumption,
 #        possibly lower runtime performance than full
+# polly: Build the kernel with clang polyhedral loop optimizer, suffix "-polly"
 # clang: Build the kernel with clang (no LTO), suffix "-clang"
 # gcc:   Build the kernel with gcc, suffix "-gcc"
 export _buildtype="gcc"
