@@ -97,7 +97,7 @@ pkgver=${_major}.${_minor}
 _stable=${_major}.${_minor}
 _srcname=linux-${_stable}
 pkgdesc='Linux BORE + Lazy Preemption + Cachy Sauce Kernel by CachyOS with other patches and improvements'
-pkgrel=7
+pkgrel=8
 _kernver="$pkgver-$pkgrel"
 _kernuname="${pkgver}-${_pkgsuffix}"
 arch=('x86_64')
@@ -328,9 +328,18 @@ prepare() {
     echo "Enabling KBUILD_CFLAGS -O3..."
     scripts/config -d CC_OPTIMIZE_FOR_PERFORMANCE -e CC_OPTIMIZE_FOR_PERFORMANCE_O3
 
-    echo "Disabling TCP_CONG_CUBIC..."
-    scripts/config -m TCP_CONG_CUBIC -d DEFAULT_CUBIC -e TCP_CONG_BBR -e DEFAULT_BBR \
-        --set-str DEFAULT_TCP_CONG bbr
+    ##
+    # Use cubic as the default TCP congestion control
+    # https://github.com/CachyOS/linux-cachyos/pull/356
+    #
+    # echo "Disabling TCP_CONG_CUBIC..."
+    # scripts/config -m TCP_CONG_CUBIC -d DEFAULT_CUBIC -e TCP_CONG_BBR -e DEFAULT_BBR \
+    #     --set-str DEFAULT_TCP_CONG bbr
+    #
+      echo "Enabling TCP_CONG_CUBIC..."
+      scripts/config -m TCP_CONG_BBR -d DEFAULT_BBR -e TCP_CONG_CUBIC -e DEFAULT_CUBIC \
+          --set-str DEFAULT_TCP_CONG cubic
+    ##
 
     ### Select THP
     [ -z "$_hugepage" ] && _die "The value is empty. Choose the correct one again."
