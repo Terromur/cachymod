@@ -1,9 +1,6 @@
 # Update patch for BORE 5.7.13
 
 * added rcu_read_lock/unlock statements to reset_task_weights_bore()
-* the count function iterates over a list safe against removal of list entry
-* use list_for_each_entry_rcu() and list_first_or_null_rcu()
-* slight refactor in update_child_burst_topologic()
 
 
 diff -uarp a/kernel/sched/bore.c b/kernel/sched/bore.c
@@ -25,41 +22,3 @@ diff -uarp a/kernel/sched/bore.c b/kernel/sched/bore.c
  }
  
  int sched_bore_update_handler(const struct ctl_table *table, int write,
-@@ -151,12 +153,15 @@ int sched_bore_update_handler(const stru
- }
- 
- #define for_each_child(p, t) \
--	list_for_each_entry(t, &(p)->children, sibling)
-+	list_for_each_entry_rcu(t, &(p)->children, sibling, \
-+		lockdep_is_held(&tasklist_lock))
- 
- static u32 count_children_max2(struct task_struct *p) {
-+	struct list_head *pos, *tmp;
- 	u32 cnt = 0;
--	struct task_struct *child;
--	for_each_child(p, child) {if (2 <= ++cnt) break;}
-+	list_for_each_safe(pos, tmp, &(p)->children) {
-+		if (2 <= ++cnt) break;
-+	}
- 	return cnt;
- }
- 
-@@ -203,12 +208,15 @@ static void update_child_burst_topologic
- 	struct task_struct *child, *dec;
- 
- 	for_each_child(p, child) {
-+		if (!task_is_bore_eligible(child)) continue;
- 		dec = child;
--		while ((dcnt = count_children_max2(dec)) == 1)
--			dec = list_first_entry(&dec->children, struct task_struct, sibling);
-+
-+		while (dec && (dcnt = count_children_max2(dec)) == 1)
-+			dec = list_first_or_null_rcu(&dec->children, struct task_struct, sibling);
- 		
-+		if (!task_is_bore_eligible(dec)) continue;
-+
- 		if (!dcnt || !depth) {
--			if (!task_is_bore_eligible(dec)) continue;
- 			cnt++;
- 			sum += dec->se.burst_penalty;
- 			continue;
