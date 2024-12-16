@@ -7,7 +7,7 @@
 
   Examples
      for i in $(seq 1 40); do echo "# $i"; time ./tg_boom -j32 -l6; echo; done
-     time ./tg_boom -j$(nproc) -l2 1e7   # simulate work
+     time ./tg_boom -j$(nproc) -l2 1e8   # simulate work
      time ./tg_boom -j$(nproc) -l6 0     # no task loop (default 0)
 
   Build with
