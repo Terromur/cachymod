@@ -12,6 +12,8 @@
 *.swp
 *.tmp
 
+linux-*
+PKGBUILD
 tg_boom
 topo_boom
 
