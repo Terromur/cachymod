@@ -92,12 +92,12 @@ else
 fi
 
 _major=6.12
-_minor=5
+_minor=6
 pkgver=${_major}.${_minor}
 _stable=${_major}.${_minor}
 _srcname=linux-${_stable}
 pkgdesc='Linux BORE + Lazy Preemption + Cachy Sauce Kernel by CachyOS with other patches and improvements'
-pkgrel=3
+pkgrel=1
 _kernver="$pkgver-$pkgrel"
 _kernuname="${pkgver}-${_pkgsuffix}"
 arch=('x86_64')
@@ -122,7 +122,8 @@ source=(
     "0001-linux6.12.y-boreupd.patch"
     "0002-change-750hz-to-800hz.patch"
     "0100-mm-kconfig-enable-rt-thp.patch"
-    "0200-clearlinux-extras.patch")
+    "0200-clearlinux-extras.patch"
+    "0210-cachymod-misc.patch")
 
 # LLVM makedepends
 if [[ "$buildtype" = "lto" || "$buildtype" = "clang" ]]; then
@@ -163,10 +164,10 @@ prepare() {
         src="${src##*/}"
         src="${src%.zst}"
         [[ $src = *.patch ]] || continue
-        if [[ "$src" = *"0001-rt.patch" && "$_preempt" != "rt" ]]; then
-            # Skip unless building a kernel with real-time preemption.
-            continue
-        fi
+      # if [[ "$src" = *"0001-rt.patch" && "$_preempt" != "rt" ]]; then
+      #     # Skip unless building a kernel with real-time preemption.
+      #     continue
+      # fi
         echo "Applying patch $src..."
         patch -Np1 < "../$src"
     done
@@ -379,7 +380,7 @@ prepare() {
 
     ### Rewrite configuration
     echo "Rewrite configuration..."
-    make "${BUILD_FLAGS[@]}" prepare
+    make "${BUILD_FLAGS[@]}" -j3 prepare
     yes "" | make "${BUILD_FLAGS[@]}" config >/dev/null
 
     ### Prepared version

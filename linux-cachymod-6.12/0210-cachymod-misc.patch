@@ -1,0 +1,468 @@
+
+Curated patches from XanMod Linux
+https://gitlab.com/xanmod/linux-patches
+
+# 0006-XANMOD-block-mq-deadline-Increase-write-priority-to-.patch
+
+From d23f0554f1b381f082dc81a6f3c523b90043b941 Mon Sep 17 00:00:00 2001
+From: Alexandre Frade <kernel@xanmod.org>
+Date: Wed, 11 May 2022 18:56:51 +0000
+Subject: [PATCH 06/18] XANMOD: block/mq-deadline: Increase write priority to
+ improve responsiveness
+
+Signed-off-by: Alexandre Frade <kernel@xanmod.org>
+---
+ block/mq-deadline.c | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/block/mq-deadline.c b/block/mq-deadline.c
+index acdc28756d9d..9d7f63ebc000 100644
+--- a/block/mq-deadline.c
++++ b/block/mq-deadline.c
+@@ -4,6 +4,9 @@
+  *  for the blk-mq scheduling framework
+  *
+  *  Copyright (C) 2016 Jens Axboe <axboe@kernel.dk>
++ *
++ *  Tunes for responsiveness by Alexandre Frade
++ *  (C) 2022 Alexandre Frade <kernel@xanmod.org>
+  */
+ #include <linux/kernel.h>
+ #include <linux/fs.h>
+@@ -28,13 +31,13 @@
+  * See Documentation/block/deadline-iosched.rst
+  */
+ static const int read_expire = HZ / 2;  /* max time before a read is submitted. */
+-static const int write_expire = 5 * HZ; /* ditto for writes, these limits are SOFT! */
++static const int write_expire = HZ;     /* ditto for writes, these limits are SOFT! */
+ /*
+  * Time after which to dispatch lower priority requests even if higher
+  * priority requests are pending.
+  */
+ static const int prio_aging_expire = 10 * HZ;
+-static const int writes_starved = 2;    /* max times reads can starve a write */
++static const int writes_starved = 1;    /* max times reads can starve a write */
+ static const int fifo_batch = 16;       /* # of sequential requests treated as one
+ 				     by the above parameters. For throughput. */
+ 
+-- 
+2.45.2
+
+# 0007-XANMOD-block-mq-deadline-Disable-front_merges-by-def.patch
+
+From 8c3035b22be106d8659d85c2651e589f53e89cc5 Mon Sep 17 00:00:00 2001
+From: Alexandre Frade <kernel@xanmod.org>
+Date: Thu, 6 Jan 2022 16:59:01 +0000
+Subject: [PATCH 07/18] XANMOD: block/mq-deadline: Disable front_merges by
+ default
+
+Signed-off-by: Alexandre Frade <kernel@xanmod.org>
+---
+ block/mq-deadline.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/block/mq-deadline.c b/block/mq-deadline.c
+index 9d7f63ebc000..bf67b420b645 100644
+--- a/block/mq-deadline.c
++++ b/block/mq-deadline.c
+@@ -600,7 +600,7 @@ static int dd_init_sched(struct request_queue *q, struct elevator_type *e)
+ 	dd->fifo_expire[DD_READ] = read_expire;
+ 	dd->fifo_expire[DD_WRITE] = write_expire;
+ 	dd->writes_starved = writes_starved;
+-	dd->front_merges = 1;
++	dd->front_merges = 0;
+ 	dd->last_dir = DD_WRITE;
+ 	dd->fifo_batch = fifo_batch;
+ 	dd->prio_aging_expire = prio_aging_expire;
+-- 
+2.45.2
+
+# 0008-XANMOD-block-Set-rq_affinity-to-force-complete-I-O-r.patch
+
+From 3d1e3f450e9ca926a899a0502fd34df6d483efae Mon Sep 17 00:00:00 2001
+From: Alexandre Frade <kernel@xanmod.org>
+Date: Mon, 16 Sep 2024 15:36:01 +0000
+Subject: [PATCH 08/18] XANMOD: block: Set rq_affinity to force complete I/O
+ requests on same CPU
+
+Signed-off-by: Alexandre Frade <kernel@xanmod.org>
+---
+ include/linux/blkdev.h | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/include/linux/blkdev.h b/include/linux/blkdev.h
+index 50c3b959da28..e291cd33edcf 100644
+--- a/include/linux/blkdev.h
++++ b/include/linux/blkdev.h
+@@ -605,7 +605,8 @@ enum {
+ 	QUEUE_FLAG_MAX
+ };
+ 
+-#define QUEUE_FLAG_MQ_DEFAULT	(1UL << QUEUE_FLAG_SAME_COMP)
++#define QUEUE_FLAG_MQ_DEFAULT	((1UL << QUEUE_FLAG_SAME_COMP) |		\
++				 (1UL << QUEUE_FLAG_SAME_FORCE))
+ 
+ void blk_queue_flag_set(unsigned int flag, struct request_queue *q);
+ void blk_queue_flag_clear(unsigned int flag, struct request_queue *q);
+-- 
+2.45.2
+
+# 0009-XANMOD-blk-wbt-Set-wbt_default_latency_nsec-to-2msec.patch
+
+From 80e2bd58a4f13d1a946c6616e18d124b1291f2a7 Mon Sep 17 00:00:00 2001
+From: Alexandre Frade <kernel@xanmod.org>
+Date: Mon, 15 Jul 2024 04:50:34 +0000
+Subject: [PATCH 09/18] XANMOD: blk-wbt: Set wbt_default_latency_nsec() to
+ 2msec
+
+Signed-off-by: Alexandre Frade <kernel@xanmod.org>
+---
+ block/blk-wbt.c | 10 ++--------
+ 1 file changed, 2 insertions(+), 8 deletions(-)
+
+diff --git a/block/blk-wbt.c b/block/blk-wbt.c
+index 6dfc659d22e2..4cf65ad7c953 100644
+--- a/block/blk-wbt.c
++++ b/block/blk-wbt.c
+@@ -730,14 +730,8 @@ EXPORT_SYMBOL_GPL(wbt_enable_default);
+ 
+ u64 wbt_default_latency_nsec(struct request_queue *q)
+ {
+-	/*
+-	 * We default to 2msec for non-rotational storage, and 75msec
+-	 * for rotational storage.
+-	 */
+-	if (blk_queue_nonrot(q))
+-		return 2000000ULL;
+-	else
+-		return 75000000ULL;
++	/* XanMod defaults to 2msec for any type of storage */
++	return 2000000ULL;
+ }
+ 
+ static int wbt_data_dir(const struct request *rq)
+-- 
+2.45.2
+
+# 0011-XANMOD-dcache-cache_pressure-50-decreases-the-rate-a.patch
+
+From a047058c64e9d75db8e714a8c1202057920e21c7 Mon Sep 17 00:00:00 2001
+From: Alexandre Frade <kernel@xanmod.org>
+Date: Mon, 29 Jan 2018 16:59:22 +0000
+Subject: [PATCH 11/18] XANMOD: dcache: cache_pressure = 50 decreases the rate
+ at which VFS caches are reclaimed
+
+Signed-off-by: Alexandre Frade <kernel@xanmod.org>
+---
+ fs/dcache.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/fs/dcache.c b/fs/dcache.c
+index 0f6b16ba30d0..ad80bfd6244f 100644
+--- a/fs/dcache.c
++++ b/fs/dcache.c
+@@ -73,7 +73,7 @@
+  * If no ancestor relationship:
+  * arbitrary, since it's serialized on rename_lock
+  */
+-int sysctl_vfs_cache_pressure __read_mostly = 100;
++int sysctl_vfs_cache_pressure __read_mostly = 50;
+ EXPORT_SYMBOL_GPL(sysctl_vfs_cache_pressure);
+ 
+ __cacheline_aligned_in_smp DEFINE_SEQLOCK(rename_lock);
+-- 
+2.45.2
+
+# 0016-XANMOD-lib-kconfig.debug-disable-default-SYMBOLIC_ER.patch
+
+From 444f831f229a418b4865d11940b3987f55ab151f Mon Sep 17 00:00:00 2001
+From: Alexandre Frade <kernel@xanmod.org>
+Date: Mon, 16 Sep 2024 08:09:56 +0000
+Subject: [PATCH 16/18] XANMOD: lib/kconfig.debug: disable default
+ SYMBOLIC_ERRNAME and DEBUG_BUGVERBOSE
+
+Signed-off-by: Alexandre Frade <kernel@xanmod.org>
+---
+ fs/bcachefs/Kconfig | 1 -
+ lib/Kconfig.debug   | 4 ++--
+ 2 files changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/fs/bcachefs/Kconfig b/fs/bcachefs/Kconfig
+index 5bac803ea367..773befb92af1 100644
+--- a/fs/bcachefs/Kconfig
++++ b/fs/bcachefs/Kconfig
+@@ -23,7 +23,6 @@ config BCACHEFS_FS
+ 	select XOR_BLOCKS
+ 	select XXHASH
+ 	select SRCU
+-	select SYMBOLIC_ERRNAME
+ 	help
+ 	The bcachefs filesystem - a modern, copy on write filesystem, with
+ 	support for multiple devices, compression, checksumming, etc.
+diff --git a/lib/Kconfig.debug b/lib/Kconfig.debug
+index 7312ae7c3cc5..78f629791bdf 100644
+--- a/lib/Kconfig.debug
++++ b/lib/Kconfig.debug
+@@ -190,7 +190,7 @@ config DYNAMIC_DEBUG_CORE
+ 
+ config SYMBOLIC_ERRNAME
+ 	bool "Support symbolic error names in printf"
+-	default y if PRINTK
++	default n
+ 	help
+ 	  If you say Y here, the kernel's printf implementation will
+ 	  be able to print symbolic error names such as ENOSPC instead
+@@ -200,7 +200,7 @@ config SYMBOLIC_ERRNAME
+ config DEBUG_BUGVERBOSE
+ 	bool "Verbose BUG() reporting (adds 70K)" if DEBUG_KERNEL && EXPERT
+ 	depends on BUG && (GENERIC_BUG || HAVE_DEBUG_BUGVERBOSE)
+-	default y
++	default n
+ 	help
+ 	  Say Y here to make BUG() panics output the file name and line number
+ 	  of the BUG call as well as the EIP and oops trace.  This aids
+-- 
+2.45.2
+
+# 0002-ZEN-dm-crypt-Disable-workqueues-for-crypto-ops.patch
+
+From deef13431e620a3637755f5fb1a671661050e755 Mon Sep 17 00:00:00 2001
+From: Steven Barrett <steven@liquorix.net>
+Date: Sat, 21 May 2022 15:15:09 -0500
+Subject: [PATCH 2/2] ZEN: dm-crypt: Disable workqueues for crypto ops
+
+Queueing in dm-crypt for crypto operations reduces performance on modern
+systems.  As discussed in an article from Cloudflare, they discovered
+that queuing was introduced because the crypto subsystem used to be
+synchronous.  Since it's now asynchronous, we get double queueing when
+using the subsystem through dm-crypt.  This is obviously undesirable and
+reduces throughput and increases latency.
+
+Fixes: https://github.com/zen-kernel/zen-kernel/issues/282
+Signed-off-by: Alexandre Frade <kernel@xanmod.org>
+---
+ drivers/md/dm-crypt.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/drivers/md/dm-crypt.c b/drivers/md/dm-crypt.c
+index 1ae2c71bb383..55d6b4806677 100644
+--- a/drivers/md/dm-crypt.c
++++ b/drivers/md/dm-crypt.c
+@@ -3315,6 +3315,9 @@ static int crypt_ctr(struct dm_target *ti, unsigned int argc, char **argv)
+ 			goto bad;
+ 	}
+ 
++	set_bit(DM_CRYPT_NO_READ_WORKQUEUE, &cc->flags);
++	set_bit(DM_CRYPT_NO_WRITE_WORKQUEUE, &cc->flags);
++
+ 	ret = crypt_ctr_cipher(ti, argv[0], argv[1]);
+ 	if (ret < 0)
+ 		goto bad;
+-- 
+2.45.2
+
+Curated patches from SUNLIGHT Linux
+https://github.com/sunlightlinux/linux-sunlight
+
+x86/tsc: Use rdtsc_ordered() when RDTSCP or LFENCE_RDTSC are supported
+
+Signed-off-by: Mario Limonciello <mario.limonciello@amd.com>
+Signed-off-by: Ionut Nechita <ionut_n2001@yahoo.com>
+
+diff --git a/arch/x86/include/asm/tsc.h b/arch/x86/include/asm/tsc.h
+--- a/arch/x86/include/asm/tsc.h
++++ b/arch/x86/include/asm/tsc.h
+@@ -24,6 +24,9 @@ static inline cycles_t get_cycles(void)
+ 	if (!IS_ENABLED(CONFIG_X86_TSC) &&
+ 	    !cpu_feature_enabled(X86_FEATURE_TSC))
+ 		return 0;
++	if (cpu_feature_enabled(X86_FEATURE_LFENCE_RDTSC) ||
++	    cpu_feature_enabled(X86_FEATURE_RDTSCP))
++		return rdtsc_ordered();
+ 	return rdtsc();
+ }
+ #define get_cycles get_cycles
+-- 
+2.43.0
+
+rcu: Change sched_setscheduler_nocheck() calls to SCHED_RR policy
+
+Signed-off-by: Alexandre Frade <kernel@xanmod.org>
+Signed-off-by: Ionut Nechita <ionut_n2001@yahoo.com>
+
+diff --git a/Documentation/admin-guide/kernel-parameters.txt b/Documentation/admin-guide/kernel-parameters.txt
+--- a/Documentation/admin-guide/kernel-parameters.txt
++++ b/Documentation/admin-guide/kernel-parameters.txt
+@@ -5070,7 +5070,7 @@
+ 			overwritten.
+ 
+ 	rcutree.kthread_prio= 	 [KNL,BOOT]
+-			Set the SCHED_FIFO priority of the RCU per-CPU
++			Set the SCHED_RR priority of the RCU per-CPU
+ 			kthreads (rcuc/N). This value is also used for
+ 			the priority of the RCU boost threads (rcub/N)
+ 			and for the RCU grace-period kthreads (rcu_bh,
+diff --git a/kernel/rcu/Kconfig b/kernel/rcu/Kconfig
+--- a/kernel/rcu/Kconfig
++++ b/kernel/rcu/Kconfig
+@@ -281,9 +281,9 @@ config RCU_NOCB_CPU_CB_BOOST
+ 	depends on RCU_NOCB_CPU && RCU_BOOST
+ 	default y if PREEMPT_RT
+ 	help
+-	  Use this option to invoke offloaded callbacks as SCHED_FIFO
++	  Use this option to invoke offloaded callbacks as SCHED_RR
+ 	  to avoid starvation by heavy SCHED_OTHER background load.
+-	  Of course, running as SCHED_FIFO during callback floods will
++	  Of course, running as SCHED_RR during callback floods will
+ 	  cause the rcuo[ps] kthreads to monopolize the CPU for hundreds
+ 	  of milliseconds or more.  Therefore, when enabling this option,
+ 	  it is your responsibility to ensure that latency-sensitive
+diff --git a/kernel/rcu/rcutorture.c b/kernel/rcu/rcutorture.c
+--- a/kernel/rcu/rcutorture.c
++++ b/kernel/rcu/rcutorture.c
+@@ -2439,12 +2439,12 @@ static int rcutorture_booster_init(unsigned int cpu)
+ 		t = per_cpu(ksoftirqd, cpu);
+ 		WARN_ON_ONCE(!t);
+ 		sp.sched_priority = 2;
+-		sched_setscheduler_nocheck(t, SCHED_FIFO, &sp);
++		sched_setscheduler_nocheck(t, SCHED_RR, &sp);
+ #ifdef CONFIG_PREEMPT_RT
+ 		t = per_cpu(timersd, cpu);
+ 		WARN_ON_ONCE(!t);
+ 		sp.sched_priority = 2;
+-		sched_setscheduler_nocheck(t, SCHED_FIFO, &sp);
++		sched_setscheduler_nocheck(t, SCHED_RR, &sp);
+ #endif
+ 	}
+ 
+diff --git a/kernel/rcu/tree.c b/kernel/rcu/tree.c
+--- a/kernel/rcu/tree.c
+--- b/kernel/rcu/tree.c
+@@ -4949,7 +4949,7 @@ static void __init rcu_start_exp_gp_kworker(void)
+ 	}
+ 
+ 	if (IS_ENABLED(CONFIG_RCU_EXP_KTHREAD))
+-		sched_setscheduler_nocheck(rcu_exp_gp_kworker->task, SCHED_FIFO, &param);
++		sched_setscheduler_nocheck(rcu_exp_gp_kworker->task, SCHED_RR, &param);
+ }
+ 
+ static void rcu_spawn_rnp_kthreads(struct rcu_node *rnp)
+@@ -5373,7 +5373,7 @@ static int __init rcu_spawn_gp_kthread(void)
+ 		return 0;
+ 	if (kthread_prio) {
+ 		sp.sched_priority = kthread_prio;
+-		sched_setscheduler_nocheck(t, SCHED_FIFO, &sp);
++		sched_setscheduler_nocheck(t, SCHED_RR, &sp);
+ 	}
+ 	rnp = rcu_get_root();
+ 	raw_spin_lock_irqsave_rcu_node(rnp, flags);
+diff --git a/kernel/rcu/tree_nocb.h b/kernel/rcu/tree_nocb.h
+--- a/kernel/rcu/tree_nocb.h
++++ b/kernel/rcu/tree_nocb.h
+@@ -1404,7 +1404,7 @@ static void rcu_spawn_cpu_nocb_kthread(int cpu)
+ 		}
+ 		WRITE_ONCE(rdp_gp->nocb_gp_kthread, t);
+ 		if (kthread_prio)
+-			sched_setscheduler_nocheck(t, SCHED_FIFO, &sp);
++			sched_setscheduler_nocheck(t, SCHED_RR, &sp);
+ 	}
+ 	mutex_unlock(&rdp_gp->nocb_gp_kthread_mutex);
+ 
+@@ -1420,7 +1420,7 @@ static void rcu_spawn_cpu_nocb_kthread(int cpu)
+ 		kthread_park(t);
+ 
+ 	if (IS_ENABLED(CONFIG_RCU_NOCB_CPU_CB_BOOST) && kthread_prio)
+-		sched_setscheduler_nocheck(t, SCHED_FIFO, &sp);
++		sched_setscheduler_nocheck(t, SCHED_RR, &sp);
+ 
+ 	WRITE_ONCE(rdp->nocb_cb_kthread, t);
+ 	WRITE_ONCE(rdp->nocb_gp_kthread, rdp_gp->nocb_gp_kthread);
+diff --git a/kernel/rcu/tree_plugin.h b/kernel/rcu/tree_plugin.h
+--- a/kernel/rcu/tree_plugin.h
++++ b/kernel/rcu/tree_plugin.h
+@@ -1020,7 +1020,7 @@ static void rcu_cpu_kthread_setup(unsigned int cpu)
+ 	struct sched_param sp;
+ 
+ 	sp.sched_priority = kthread_prio;
+-	sched_setscheduler_nocheck(current, SCHED_FIFO, &sp);
++	sched_setscheduler_nocheck(current, SCHED_RR, &sp);
+ #endif /* #ifdef CONFIG_RCU_BOOST */
+ 
+ 	WRITE_ONCE(rdp->rcuc_activity, jiffies);
+@@ -1218,7 +1218,7 @@ static void rcu_spawn_one_boost_kthread(struct rcu_node *rnp)
+ 	rnp->boost_kthread_task = t;
+ 	raw_spin_unlock_irqrestore_rcu_node(rnp, flags);
+ 	sp.sched_priority = kthread_prio;
+-	sched_setscheduler_nocheck(t, SCHED_FIFO, &sp);
++	sched_setscheduler_nocheck(t, SCHED_RR, &sp);
+ 	wake_up_process(t); /* get to TASK_INTERRUPTIBLE quickly. */
+ }
+ 
+-- 
+2.43.0
+
+Change default value for wq_cpu_intensive_thresh_us
+
+Description:
+ - 10ms -> 30ms
+ - By using new processors it helps to have
+   a higher threshold for thresh
+
+Bug: N/A
+Signed-off-by: Ionut Nechita <ionut_n2001@yahoo.com>
+
+diff --git a/kernel/workqueue.c b/kernel/workqueue.c
+--- a/kernel/workqueue.c
++++ b/kernel/workqueue.c
+@@ -7827,20 +7827,20 @@ static void __init wq_cpu_intensive_thresh_init(void)
+ 		return;
+ 
+ 	/*
+-	 * The default of 10ms is derived from the fact that most modern (as of
+-	 * 2023) processors can do a lot in 10ms and that it's just below what
++	 * The default of 30ms is derived from the fact that most modern (as of
++	 * 2023) processors can do a lot in 30ms and that it's just below what
+ 	 * most consider human-perceivable. However, the kernel also runs on a
+ 	 * lot slower CPUs including microcontrollers where the threshold is way
+ 	 * too low.
+ 	 *
+-	 * Let's scale up the threshold upto 1 second if BogoMips is below 4000.
++	 * Let's scale up the threshold upto 3 second if BogoMips is below 4000.
+ 	 * This is by no means accurate but it doesn't have to be. The mechanism
+ 	 * is still useful even when the threshold is fully scaled up. Also, as
+ 	 * the reports would usually be applicable to everyone, some machines
+ 	 * operating on longer thresholds won't significantly diminish their
+ 	 * usefulness.
+ 	 */
+-	thresh = 10 * USEC_PER_MSEC;
++	thresh = 30 * USEC_PER_MSEC;
+ 
+ 	/* see init/calibrate.c for lpj -> BogoMIPS calculation */
+ 	bogo = max_t(unsigned long, loops_per_jiffy / 500000 * HZ, 1);
+-- 
+2.43.0
+
+Minor change BLK_DEV_RUST_NULL with default n
+
+Description:
+ -  Minor change BLK_DEV_RUST_NULL with default n
+
+Signed-off-by: Ionut Nechita <ionut_n2001@yahoo.com>
+
+diff --git a/drivers/block/Kconfig b/drivers/block/Kconfig
+--- a/drivers/block/Kconfig
++++ b/drivers/block/Kconfig
+@@ -355,8 +355,9 @@ config VIRTIO_BLK
+           QEMU based VMMs (like KVM or Xen).  Say Y or M.
+ 
+ config BLK_DEV_RUST_NULL
+-	tristate "Rust null block driver (Experimental)"
++	bool "Rust null block driver (Experimental)"
+ 	depends on RUST
++	default n
+ 	help
+ 	  This is the Rust implementation of the null block driver. For now it
+ 	  is only a minimal stub.
+-- 
+2.43.0
+
