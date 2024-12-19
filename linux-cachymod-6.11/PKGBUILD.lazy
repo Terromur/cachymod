@@ -97,7 +97,7 @@ pkgver=${_major}.${_minor}
 _stable=${_major}.${_minor}
 _srcname=linux-${_stable}
 pkgdesc='Linux BORE + Lazy Preemption + Cachy Sauce Kernel by CachyOS with other patches and improvements'
-pkgrel=9
+pkgrel=10
 _kernver="$pkgver-$pkgrel"
 _kernuname="${pkgver}-${_pkgsuffix}"
 arch=('x86_64')
@@ -131,7 +131,7 @@ source=(
     "0004-linux6.11.2-rt7-update4.patch"
     "0100-mm-kconfig-enable-rt-thp.patch"
     "0200-clearlinux-extras.patch"
-    "0210-xfs-reduce-unneeded-searches.patch"
+    "0210-cachymod-misc.patch"
     "0001-sched-ext.patch")
 
 # LLVM makedepends
@@ -399,7 +399,7 @@ prepare() {
 
     ### Rewrite configuration
     echo "Rewrite configuration..."
-    make "${BUILD_FLAGS[@]}" prepare
+    make "${BUILD_FLAGS[@]}" -j3 prepare
     yes "" | make "${BUILD_FLAGS[@]}" config >/dev/null
 
     ### Prepared version
