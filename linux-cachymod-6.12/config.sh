@@ -231,10 +231,11 @@ if [[ $(uname -m) = *"x86"* ]]; then
     ### 0200 to remove the depends on EXPERT check.
     scripts/config -e DEBUG_FORCE_FUNCTION_ALIGN_64B
 
-    ### Disable heap memory zeroing on allocation by default.
-    ### Instead, enable register zeroing on function exit.
-    scripts/config -d INIT_ON_ALLOC_DEFAULT_ON
-    scripts/config -e ZERO_CALL_USED_REGS
+    # This breaks NVIDIA OpenCL. Commented out on 2024-12-18.
+    # ### Disable heap memory zeroing on allocation by default.
+    # ### Instead, enable register zeroing on function exit.
+    # scripts/config -d INIT_STACK_ALL_ZERO -d INIT_ON_ALLOC_DEFAULT_ON
+    # scripts/config -e INIT_STACK_NONE -e ZERO_CALL_USED_REGS
 
     ### Disable Integrity Policy Enforcement (IPE).
     scripts/config -d SECURITY_IPE
