@@ -1,7 +1,7 @@
 #!/bin/bash
 # Trim kernel by deselecting options not enabled in the Clear Linux config.
 # Options already unset in the CachyOS config were pruned from this list.
-# Last checked: 2024-11-09
+# Last checked: 2024-12-19
 
 # Exit immediately on error.
 set -e
@@ -213,7 +213,6 @@ scripts/config -d SCSI_PROC_FS
 scripts/config -d SCSI_AIC94XX
 scripts/config -d SCSI_MVSAS_TASKLET
 scripts/config -d MEGARAID_NEWGEN
-scripts/config -d SCSI_MPI3MR
 scripts/config -d SCSI_FLASHPOINT
 scripts/config -d SCSI_PPA
 scripts/config -d SCSI_IMM
@@ -471,7 +470,6 @@ scripts/config -d KEYBOARD_TCA8418
 scripts/config -d KEYBOARD_MATRIX
 scripts/config -d KEYBOARD_LM8333
 scripts/config -d KEYBOARD_MAX7359
-scripts/config -d KEYBOARD_MCS
 scripts/config -d KEYBOARD_MPR121
 scripts/config -d KEYBOARD_NEWTON
 scripts/config -d KEYBOARD_OPENCORES
@@ -580,11 +578,6 @@ scripts/config -d APPLICOM
 scripts/config -d TCG_VTPM_PROXY
 scripts/config -d TCG_TIS_ST33ZP24_SPI
 scripts/config -d XILLYUSB
-
-#
-# I2C support
-#
-scripts/config -d I2C_COMPAT
 
 #
 # PC SMBus host controller drivers
@@ -1557,7 +1550,6 @@ scripts/config -d VFIO_DEBUGFS
 scripts/config -d NITRO_ENCLAVES
 scripts/config -d VIRTIO_MMIO_CMDLINE_DEVICES
 scripts/config -d VIRTIO_DEBUG
-scripts/config -d VDPA_USER
 scripts/config -d SNET_VDPA
 scripts/config -d OCTEONEP_VDPA
 
@@ -1590,7 +1582,6 @@ scripts/config -d AD5933
 
 scripts/config -d STAGING_MEDIA
 scripts/config -d LTE_GDM724X
-scripts/config -d KS7010
 scripts/config -d CROS_EC_DEBUGFS
 scripts/config -d CHROMEOS_PRIVACY_SCREEN
 scripts/config -d CZNIC_PLATFORMS
@@ -2140,9 +2131,4 @@ scripts/config -d CRYPTO_AEGIS128
 # Hashes, digests, and MACs
 #
 scripts/config -d CRYPTO_RMD160
-
-#
-# Compression
-#
-scripts/config -d CRYPTO_842
 
