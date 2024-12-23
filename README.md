@@ -1,6 +1,6 @@
 # CachyMod
 
-Run a 6.11 or 6.12 kernel with lazy preemption capability on [CachyOS](https://cachyos.org/).
+Run a kernel with lazy preemption capability on [CachyOS](https://cachyos.org/).
 
 If running NVIDIA graphics, first switch to DKMS for future proof CachyOS
 updating the NVIDIA stack to a later release.
@@ -14,13 +14,14 @@ sudo pacman -Rsn linux-cachyos-nvidia
 sudo pacman -Rsn linux-cachyos-nvidia-open
 
 # Install NVIDIA sources for DKMS (choose one).
-sudo pacman -S nvidia-dkms
-sudo pacman -S nvidia-open-dkms
+sudo pacman -Sy nvidia-550xx-dkms  # 6.13 needs 550.142.1 or later
+sudo pacman -Sy nvidia-dkms        # 6.13 needs 565.77-5 or later
+sudo pacman -Sy nvidia-open-dkms   # 6.13 needs 565.77-5 or later
 ```
 
 ## Building and Installation
 
-Copy a `linux-cachymod-6.11/12` folder to a work area with ample storage space,
+Copy a `linux-cachymod-6.11/12/13` folder to a work area with ample storage space,
 and change directory. Optionally, adjust the build options in `PKGBUILD.lazy.sh`.
 Select `_preempt=rt` for the realtime kernel.
 
@@ -28,30 +29,32 @@ Select `_preempt=rt` for the realtime kernel.
 bash PKGBUILD.lazy.sh
 
 # lazy
-sudo pacman -U linux-cachymod-611-lto-{6,h}*.zst
-sudo pacman -U linux-cachymod-611-clang-{6,h}*.zst
-sudo pacman -U linux-cachymod-611-gcc-{6,h}*.zst
+sudo pacman -U linux-cachymod-612-lto-{6,h}*.zst
+sudo pacman -U linux-cachymod-612-polly-{6,h}*.zst
+sudo pacman -U linux-cachymod-612-clang-{6,h}*.zst
+sudo pacman -U linux-cachymod-612-gcc-{6,h}*.zst
 
 # lazy-rt
-sudo pacman -U linux-cachymod-611-lto-rt*.zst
-sudo pacman -U linux-cachymod-611-clang-rt*.zst
-sudo pacman -U linux-cachymod-611-gcc-rt*.zst
+sudo pacman -U linux-cachymod-612-lto-rt*.zst
+sudo pacman -U linux-cachymod-612-polly-rt*.zst
+sudo pacman -U linux-cachymod-612-clang-rt*.zst
+sudo pacman -U linux-cachymod-612-gcc-rt*.zst
 ```
 
-Removal is via pacman as well. Change the kernel version and
-build type accordingly to { 611, 612 } and { lto, clang, gcc },
+Removal is via pacman as well. Change the kernel version and build
+type accordingly to { 611, 612, 613 } and { lto, polly, clang, gcc },
 respectively.
 
 ```text
 # lazy
 sudo pacman -Rsn \
-  linux-cachymod-611-gcc \
-  linux-cachymod-611-gcc-headers
+  linux-cachymod-612-gcc \
+  linux-cachymod-612-gcc-headers
 
 # lazy-rt
 sudo pacman -Rsn \
-  linux-cachymod-611-gcc-rt \
-  linux-cachymod-611-gcc-rt-headers
+  linux-cachymod-612-gcc-rt \
+  linux-cachymod-612-gcc-rt-headers
 ```
 
 The desired preemption can be specified with a kernel argument.
@@ -89,12 +92,6 @@ mario.fast-rt
 mario.lazy
 mario.lazy-rt
 ```
-
-3. The 6.12 kernel will not work with the NVIDIA 550xx driver. 
-
-I applied `0006-nvidia-drm-Set-FOP_UNSIGNED_OFFSET-for-nv_drm_fops.f.patch`
-to `/usr/src/nvidia-550.127.05`, and the kernel works well. Ask kindly the
-CachyOS team to include the patch for the 550xx driver.
 
 ## LICENSE
 
