@@ -10,6 +10,9 @@ scripts/config -d GPIO_BT8XX
 scripts/config -d INTEL_TDX_HOST
 scripts/config -d SND_SE6X
 
+### Disable memory hotplug not needed for desktop use.
+scripts/config -d MEMORY_HOTPLUG
+
 ### Set the minimal base_slice_ns option for BORE.
 ### 1000Hz = 2.0ms, 800Hz = 2.5ms, 600Hz = 1.6(6)ms, 500Hz = 2.0ms.
 scripts/config --set-val MIN_BASE_SLICE_NS 1600000
