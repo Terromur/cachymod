@@ -1,6 +1,6 @@
 # Update patch for BORE 5.7.13
 
-* add rcu_read_lock/unlock statements to reset_task_weights_bore()
+* change irqsave/irqrestore to raw_spin variants in reset_task_weights_bore()
 * change list_for_each_entry() to list_for_each_entry_rcu(), mitigates stutters
 * skip ineligible tasks in update_child_burst_topologic(), CachyMod preference
 * add list_empty() checks, improves spin rate
@@ -9,23 +9,34 @@
 diff -uarp a/kernel/sched/bore.c b/kernel/sched/bore.c
 --- a/kernel/sched/bore.c
 +++ b/kernel/sched/bore.c
-@@ -128,6 +128,7 @@ static void reset_task_weights_bore(void
+@@ -126,17 +126,23 @@ static inline bool task_is_bore_eligible
+ static void reset_task_weights_bore(void) {
+ 	struct task_struct *task;
  	struct rq *rq;
- 	struct rq_flags rf;
+-	struct rq_flags rf;
++	unsigned long flags;
++	int count = 0;
  
-+	rcu_read_lock();
++	printk(KERN_INFO "BORE reset_task_weights_bore started.\n");
++
  	write_lock_irq(&tasklist_lock);
  	for_each_process(task) {
  		if (!task_is_bore_eligible(task)) continue;
-@@ -137,6 +138,7 @@ static void reset_task_weights_bore(void
- 		rq_unlock_irqrestore(rq, &rf);
+ 		rq = task_rq(task);
+-		rq_lock_irqsave(rq, &rf);
++		raw_spin_rq_lock_irqsave(rq, flags);
+ 		reweight_task_by_prio(task, effective_prio(task));
+-		rq_unlock_irqrestore(rq, &rf);
++		raw_spin_rq_unlock_irqrestore(rq, flags);
++		count++;
  	}
  	write_unlock_irq(&tasklist_lock);
-+	rcu_read_unlock();
++
++	printk(KERN_INFO "BORE reset_task_weights_bore finished. Processed %d tasks.\n", count);
  }
  
  int sched_bore_update_handler(const struct ctl_table *table, int write,
-@@ -151,7 +153,8 @@ int sched_bore_update_handler(const stru
+@@ -151,7 +157,8 @@ int sched_bore_update_handler(const stru
  }
  
  #define for_each_child(p, t) \
@@ -35,7 +46,7 @@ diff -uarp a/kernel/sched/bore.c b/kernel/sched/bore.c
  
  static u32 count_children_max2(struct task_struct *p) {
  	u32 cnt = 0;
-@@ -191,7 +194,7 @@ static inline u8 inherit_burst_direct(
+@@ -191,7 +198,7 @@ static inline u8 inherit_burst_direct(
  	if (clone_flags & CLONE_PARENT)
  		parent = parent->real_parent;
  
@@ -44,7 +55,7 @@ diff -uarp a/kernel/sched/bore.c b/kernel/sched/bore.c
  		update_child_burst_direct(parent, now);
  
  	return parent->se.child_burst.score;
-@@ -204,11 +207,12 @@ static void update_child_burst_topologic
+@@ -204,11 +211,12 @@ static void update_child_burst_topologic
  
  	for_each_child(p, child) {
  		dec = child;
@@ -59,7 +70,7 @@ diff -uarp a/kernel/sched/bore.c b/kernel/sched/bore.c
  			cnt++;
  			sum += dec->se.burst_penalty;
  			continue;
-@@ -219,7 +223,8 @@ static void update_child_burst_topologic
+@@ -219,7 +227,8 @@ static void update_child_burst_topologic
  			if (sched_burst_cache_stop_count <= cnt) break;
  			continue;
  		}
@@ -69,7 +80,7 @@ diff -uarp a/kernel/sched/bore.c b/kernel/sched/bore.c
  	}
  
  	update_burst_cache(&p->se.child_burst, p, cnt, sum, now);
-@@ -245,7 +250,7 @@ static inline u8 inherit_burst_topologic
+@@ -245,7 +254,7 @@ static inline u8 inherit_burst_topologic
  		base_child_cnt = 1;
  	}
  
@@ -78,3 +89,18 @@ diff -uarp a/kernel/sched/bore.c b/kernel/sched/bore.c
  		update_child_burst_topological(
  			anc, now, sched_burst_fork_atavistic - 1, &cnt, &sum);
  
+@@ -286,12 +295,14 @@ void sched_clone_bore(
+ 		penalty = inherit_burst_tg(parent, now);
+ 		rcu_read_unlock();
+ 	} else {
++		rcu_read_lock();
+ 		read_lock(&tasklist_lock);
+ 		now = jiffies_to_nsecs(jiffies);
+ 		penalty = likely(sched_burst_fork_atavistic) ?
+ 			inherit_burst_topological(parent, now, clone_flags):
+ 			inherit_burst_direct(parent, now, clone_flags);
+ 		read_unlock(&tasklist_lock);
++		rcu_read_unlock();
+ 	}
+ 
+ 	struct sched_entity *se = &p->se;
