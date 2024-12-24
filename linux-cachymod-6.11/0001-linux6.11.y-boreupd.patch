@@ -1,7 +1,6 @@
 # Update patch for BORE 5.7.10
 
-* backport linux6.12.y-bore5.7.13
-* change irqsave/irqrestore to raw_spin variants in reset_task_weights_bore()
+* backport linux6.12.y-bore5.7.14
 * change list_for_each_entry() to list_for_each_entry_rcu(), mitigates stutters
 * skip ineligible tasks in update_child_burst_topologic(), CachyMod preference
 * add list_empty() checks, improves spin rate
@@ -15,14 +14,23 @@ diff -uarp a/include/linux/sched/bore.h b/include/linux/sched/bore.h
  #ifndef _LINUX_SCHED_BORE_H
  #define _LINUX_SCHED_BORE_H
 -#define SCHED_BORE_VERSION "5.7.10"
-+#define SCHED_BORE_VERSION "5.7.13"
++#define SCHED_BORE_VERSION "5.7.14"
  
  #ifdef CONFIG_SCHED_BORE
  extern u8   __read_mostly sched_bore;
+@@ -26,7 +26,7 @@ extern void restart_burst(struct sched_e
+ extern void restart_burst_rescale_deadline(struct sched_entity *se);
+ 
+ extern int sched_bore_update_handler(const struct ctl_table *table, int write,
+-		void __user *buffer, size_t *lenp, loff_t *ppos);
++	void __user *buffer, size_t *lenp, loff_t *ppos);
+ 
+ extern void sched_clone_bore(
+ 	struct task_struct *p, struct task_struct *parent, u64 clone_flags);
 diff -uarp a/kernel/sched/bore.c b/kernel/sched/bore.c
 --- a/kernel/sched/bore.c
 +++ b/kernel/sched/bore.c
-@@ -121,22 +121,28 @@ void restart_burst_rescale_deadline(stru
+@@ -121,7 +121,7 @@ void restart_burst_rescale_deadline(stru
  }
  
  static inline bool task_is_bore_eligible(struct task_struct *p)
@@ -31,31 +39,27 @@ diff -uarp a/kernel/sched/bore.c b/kernel/sched/bore.c
  
  static void reset_task_weights_bore(void) {
  	struct task_struct *task;
- 	struct rq *rq;
--	struct rq_flags rf;
-+	unsigned long flags;
-+	int count = 0;
- 
-+	printk(KERN_INFO "BORE reset_task_weights_bore started.\n");
-+
- 	write_lock_irq(&tasklist_lock);
+@@ -132,15 +132,16 @@ static void reset_task_weights_bore(void
  	for_each_process(task) {
  		if (!task_is_bore_eligible(task)) continue;
  		rq = task_rq(task);
 -		rq_lock_irqsave(rq, &rf);
-+		raw_spin_rq_lock_irqsave(rq, flags);
++		rq_pin_lock(rq, &rf);
++		update_rq_clock(rq);
  		reweight_task_by_prio(task, effective_prio(task));
 -		rq_unlock_irqrestore(rq, &rf);
-+		raw_spin_rq_unlock_irqrestore(rq, flags);
-+		count++;
++		rq_unpin_lock(rq, &rf);
  	}
  	write_unlock_irq(&tasklist_lock);
-+
-+	printk(KERN_INFO "BORE reset_task_weights_bore finished. Processed %d tasks.\n", count);
  }
  
  int sched_bore_update_handler(const struct ctl_table *table, int write,
-@@ -151,7 +157,8 @@ int sched_bore_update_handler(const stru
+-		void __user *buffer, size_t *lenp, loff_t *ppos) {
++	void __user *buffer, size_t *lenp, loff_t *ppos) {
+ 	int ret = proc_dou8vec_minmax(table, write, buffer, lenp, ppos);
+ 	if (ret || !write)
+ 		return ret;
+@@ -151,7 +152,8 @@ int sched_bore_update_handler(const stru
  }
  
  #define for_each_child(p, t) \
@@ -65,7 +69,16 @@ diff -uarp a/kernel/sched/bore.c b/kernel/sched/bore.c
  
  static u32 count_children_max2(struct task_struct *p) {
  	u32 cnt = 0;
-@@ -184,9 +191,14 @@ static inline void update_child_burst_di
+@@ -164,7 +166,7 @@ static inline bool burst_cache_expired(s
+ {return (s64)(bc->timestamp + sched_burst_cache_lifetime - now) < 0;}
+ 
+ static void update_burst_cache(struct sched_burst_cache *bc,
+-		struct task_struct *p, u32 cnt, u32 sum, u64 now) {
++	struct task_struct *p, u32 cnt, u32 sum, u64 now) {
+ 	u8 avg = cnt ? sum / cnt : 0;
+ 	bc->score = max(avg, p->se.burst_penalty);
+ 	bc->count = cnt;
+@@ -184,9 +186,14 @@ static inline void update_child_burst_di
  	update_burst_cache(&p->se.child_burst, p, cnt, sum, now);
  }
  
@@ -82,7 +95,7 @@ diff -uarp a/kernel/sched/bore.c b/kernel/sched/bore.c
  		update_child_burst_direct(parent, now);
  
  	return parent->se.child_burst.score;
-@@ -199,11 +211,12 @@ static void update_child_burst_topologic
+@@ -199,11 +206,12 @@ static void update_child_burst_topologic
  
  	for_each_child(p, child) {
  		dec = child;
@@ -97,7 +110,7 @@ diff -uarp a/kernel/sched/bore.c b/kernel/sched/bore.c
  			cnt++;
  			sum += dec->se.burst_penalty;
  			continue;
-@@ -214,7 +227,8 @@ static void update_child_burst_topologic
+@@ -214,7 +222,8 @@ static void update_child_burst_topologic
  			if (sched_burst_cache_stop_count <= cnt) break;
  			continue;
  		}
@@ -107,7 +120,7 @@ diff -uarp a/kernel/sched/bore.c b/kernel/sched/bore.c
  	}
  
  	update_burst_cache(&p->se.child_burst, p, cnt, sum, now);
-@@ -222,15 +236,25 @@ static void update_child_burst_topologic
+@@ -222,15 +231,25 @@ static void update_child_burst_topologic
  	*asum += sum;
  }
  
@@ -137,7 +150,7 @@ diff -uarp a/kernel/sched/bore.c b/kernel/sched/bore.c
  		update_child_burst_topological(
  			anc, now, sched_burst_fork_atavistic - 1, &cnt, &sum);
  
-@@ -251,7 +275,7 @@ static inline void update_tg_burst(struc
+@@ -251,7 +270,7 @@ static inline void update_tg_burst(struc
  }
  
  static inline u8 inherit_burst_tg(struct task_struct *p, u64 now) {
@@ -146,7 +159,13 @@ diff -uarp a/kernel/sched/bore.c b/kernel/sched/bore.c
  	if (burst_cache_expired(&parent->se.group_burst, now))
  		update_tg_burst(parent, now);
  
-@@ -265,18 +289,21 @@ void sched_clone_bore(
+@@ -260,25 +279,26 @@ static inline u8 inherit_burst_tg(struct
+ 
+ void sched_clone_bore(
+ 	struct task_struct *p, struct task_struct *parent, u64 clone_flags) {
++	struct sched_entity *se = &p->se;
+ 	u64 now;
+ 	u8 penalty;
  
  	if (!task_is_bore_eligible(p)) return;
  
@@ -160,7 +179,6 @@ diff -uarp a/kernel/sched/bore.c b/kernel/sched/bore.c
  	} else {
 -		if (clone_flags & CLONE_PARENT)
 -			parent = parent->real_parent;
-+		rcu_read_lock();
 +		read_lock(&tasklist_lock);
 +		now = jiffies_to_nsecs(jiffies);
  		penalty = likely(sched_burst_fork_atavistic) ?
@@ -169,9 +187,10 @@ diff -uarp a/kernel/sched/bore.c b/kernel/sched/bore.c
 +			inherit_burst_topological(parent, now, clone_flags):
 +			inherit_burst_direct(parent, now, clone_flags);
 +		read_unlock(&tasklist_lock);
-+		rcu_read_unlock();
  	}
 -	read_unlock(&tasklist_lock);
  
- 	struct sched_entity *se = &p->se;
+-	struct sched_entity *se = &p->se;
  	revolve_burst_penalty(se);
+ 	se->burst_penalty = se->prev_burst_penalty =
+ 		max(se->prev_burst_penalty, penalty);
