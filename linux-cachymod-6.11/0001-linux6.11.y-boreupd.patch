@@ -1,9 +1,6 @@
 # Update patch for BORE 5.7.10
 
 * backport linux6.12.y-bore5.7.14
-* change list_for_each_entry() to list_for_each_entry_rcu(), mitigates stutters
-* skip ineligible tasks in update_child_burst_topologic(), CachyMod preference
-* add list_empty() checks, improves spin rate
 
 
 diff -uarp a/include/linux/sched/bore.h b/include/linux/sched/bore.h
@@ -59,17 +56,7 @@ diff -uarp a/kernel/sched/bore.c b/kernel/sched/bore.c
  	int ret = proc_dou8vec_minmax(table, write, buffer, lenp, ppos);
  	if (ret || !write)
  		return ret;
-@@ -151,7 +152,8 @@ int sched_bore_update_handler(const stru
- }
- 
- #define for_each_child(p, t) \
--	list_for_each_entry(t, &(p)->children, sibling)
-+	list_for_each_entry_rcu(t, &(p)->children, sibling, \
-+		lockdep_is_held(&tasklist_lock))
- 
- static u32 count_children_max2(struct task_struct *p) {
- 	u32 cnt = 0;
-@@ -164,7 +166,7 @@ static inline bool burst_cache_expired(s
+@@ -164,7 +165,7 @@ static inline bool burst_cache_expired(s
  {return (s64)(bc->timestamp + sched_burst_cache_lifetime - now) < 0;}
  
  static void update_burst_cache(struct sched_burst_cache *bc,
@@ -78,7 +65,7 @@ diff -uarp a/kernel/sched/bore.c b/kernel/sched/bore.c
  	u8 avg = cnt ? sum / cnt : 0;
  	bc->score = max(avg, p->se.burst_penalty);
  	bc->count = cnt;
-@@ -184,9 +186,14 @@ static inline void update_child_burst_di
+@@ -184,8 +185,13 @@ static inline void update_child_burst_di
  	update_burst_cache(&p->se.child_burst, p, cnt, sum, now);
  }
  
@@ -86,41 +73,14 @@ diff -uarp a/kernel/sched/bore.c b/kernel/sched/bore.c
 +static inline u8 inherit_burst_direct(
 +	struct task_struct *p, u64 now, u64 clone_flags) {
  	struct task_struct *parent = p;
--	if (burst_cache_expired(&parent->se.child_burst, now))
 +
 +	if (clone_flags & CLONE_PARENT)
 +		parent = parent->real_parent;
 +
-+	if (burst_cache_expired(&parent->se.child_burst, now) && !list_empty(&parent->children))
+ 	if (burst_cache_expired(&parent->se.child_burst, now))
  		update_child_burst_direct(parent, now);
  
- 	return parent->se.child_burst.score;
-@@ -199,11 +206,12 @@ static void update_child_burst_topologic
- 
- 	for_each_child(p, child) {
- 		dec = child;
--		while ((dcnt = count_children_max2(dec)) == 1)
-+		while (dec && (dcnt = count_children_max2(dec)) == 1)
- 			dec = list_first_entry(&dec->children, struct task_struct, sibling);
- 		
-+		if (!task_is_bore_eligible(dec)) continue;
-+
- 		if (!dcnt || !depth) {
--			if (!task_is_bore_eligible(dec)) continue;
- 			cnt++;
- 			sum += dec->se.burst_penalty;
- 			continue;
-@@ -214,7 +222,8 @@ static void update_child_burst_topologic
- 			if (sched_burst_cache_stop_count <= cnt) break;
- 			continue;
- 		}
--		update_child_burst_topological(dec, now, depth - 1, &cnt, &sum);
-+		if (!list_empty(&dec->children))
-+			update_child_burst_topological(dec, now, depth - 1, &cnt, &sum);
- 	}
- 
- 	update_burst_cache(&p->se.child_burst, p, cnt, sum, now);
-@@ -222,15 +231,25 @@ static void update_child_burst_topologic
+@@ -222,13 +228,23 @@ static void update_child_burst_topologic
  	*asum += sum;
  }
  
@@ -145,12 +105,9 @@ diff -uarp a/kernel/sched/bore.c b/kernel/sched/bore.c
 +		base_child_cnt = 1;
 +	}
  
--	if (burst_cache_expired(&anc->se.child_burst, now))
-+	if (burst_cache_expired(&anc->se.child_burst, now) && !list_empty(&anc->children))
+ 	if (burst_cache_expired(&anc->se.child_burst, now))
  		update_child_burst_topological(
- 			anc, now, sched_burst_fork_atavistic - 1, &cnt, &sum);
- 
-@@ -251,7 +270,7 @@ static inline void update_tg_burst(struc
+@@ -251,7 +267,7 @@ static inline void update_tg_burst(struc
  }
  
  static inline u8 inherit_burst_tg(struct task_struct *p, u64 now) {
@@ -159,7 +116,7 @@ diff -uarp a/kernel/sched/bore.c b/kernel/sched/bore.c
  	if (burst_cache_expired(&parent->se.group_burst, now))
  		update_tg_burst(parent, now);
  
-@@ -260,25 +279,26 @@ static inline u8 inherit_burst_tg(struct
+@@ -260,25 +276,26 @@ static inline u8 inherit_burst_tg(struct
  
  void sched_clone_bore(
  	struct task_struct *p, struct task_struct *parent, u64 clone_flags) {

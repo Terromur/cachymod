@@ -44,7 +44,7 @@ _localmodcfg=${_localmodcfg-}
 # Path to the list of used modules
 _localmodcfg_path=${_localmodcfg_path-"$HOME/.config/modprobed.db"}
 
-### Running with a 1000HZ, 800Hz, 600Hz, or 500Hz tick rate
+### Running with a 1000HZ, 800Hz, 750Hz, 600Hz, or 500Hz tick rate
 _HZ_ticks=${_HZ_ticks-1000}
 
 ### Choose between full or idle tickless type
@@ -103,7 +103,7 @@ _stable=${_major}-${_rcver}
 
 _srcname=linux-${_stable}
 pkgdesc='Linux BORE + Lazy Preemption + Cachy Sauce Kernel by CachyOS with other patches and improvements'
-pkgrel=2
+pkgrel=3
 _kernver="$pkgver-$pkgrel"
 _kernuname="${pkgver}-${_pkgsuffix}"
 arch=('x86_64')
@@ -124,8 +124,7 @@ source=(
     "0001-cachyos-base-all.patch"
     "0001-sched-fair-remove-cachy-mods.patch"
     "0001-linux6.13.y-bore.patch"
-    "0001-linux6.13.y-boreupd.patch"
-    "0002-change-750hz-to-800hz.patch"
+    "0002-kconfig-add-800Hz.patch"
     "0100-mm-kconfig-enable-rt-thp.patch"
     "0200-clearlinux-extras.patch"
     "0210-cachymod-misc.patch")
@@ -242,13 +241,13 @@ prepare() {
     [ -z "$_HZ_ticks" ] && _die "The value is empty. Choose the correct one again."
 
     case "$_HZ_ticks" in
-        1000|800|600|500)
+        1000|800|750|600|500)
             scripts/config -d HZ_800 -d HZ_300 -e "HZ_${_HZ_ticks}" --set-val HZ "${_HZ_ticks}";;
         *)
             _die "The value $_HZ_ticks is invalid. Choose the correct one again."
     esac
 
-    echo "Setting tick rate to ${_HZ_ticks}Hz..."
+    echo "Setting tick rate to ${_HZ_ticks} Hz..."
 
     ### Disable NUMA
     if [ -n "$_NUMAdisable" ]; then

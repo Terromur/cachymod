@@ -1,7 +1,7 @@
-From ea7553b655b218c0b78b831253e05d0317b3c16b Mon Sep 17 00:00:00 2001
+From 4607e2b13f45b4c0b0e22c333b6bb7573aeb2285 Mon Sep 17 00:00:00 2001
 From: Masahito S <firelzrd@gmail.com>
-Date: Thu, 12 Dec 2024 06:57:02 +0900
-Subject: [PATCH] linux6.13.y-bore5.7.14
+Date: Sat, 28 Dec 2024 02:04:36 +0900
+Subject: [PATCH] linux6.13.y-bore5.7.15
 
 ---
  include/linux/sched.h      |  17 ++
@@ -13,9 +13,9 @@ Subject: [PATCH] linux6.13.y-bore5.7.14
  kernel/sched/bore.c        | 424 +++++++++++++++++++++++++++++++++++++
  kernel/sched/core.c        |   6 +
  kernel/sched/debug.c       |  61 +++++-
- kernel/sched/fair.c        |  72 ++++++-
+ kernel/sched/fair.c        |  73 ++++++-
  kernel/sched/sched.h       |   9 +
- 11 files changed, 664 insertions(+), 5 deletions(-)
+ 11 files changed, 665 insertions(+), 5 deletions(-)
  create mode 100644 include/linux/sched/bore.h
  create mode 100644 kernel/sched/bore.c
 
@@ -56,7 +56,7 @@ index 66b311fbd5..df47a95e8f 100644
  
 diff --git a/include/linux/sched/bore.h b/include/linux/sched/bore.h
 new file mode 100644
-index 0000000000..eb17663d2e
+index 0000000000..653b918d36
 --- /dev/null
 +++ b/include/linux/sched/bore.h
 @@ -0,0 +1,40 @@
@@ -66,7 +66,7 @@ index 0000000000..eb17663d2e
 +
 +#ifndef _LINUX_SCHED_BORE_H
 +#define _LINUX_SCHED_BORE_H
-+#define SCHED_BORE_VERSION "5.7.14"
++#define SCHED_BORE_VERSION "5.7.15"
 +
 +#ifdef CONFIG_SCHED_BORE
 +extern u8   __read_mostly sched_bore;
@@ -750,7 +750,7 @@ index a1be00a988..66fcb22900 100644
  	P(se.avg.runnable_sum);
  	P(se.avg.util_sum);
 diff --git a/kernel/sched/fair.c b/kernel/sched/fair.c
-index 3e9ca38512..58ad3c2c95 100644
+index 3e9ca38512..950a32fe14 100644
 --- a/kernel/sched/fair.c
 +++ b/kernel/sched/fair.c
 @@ -55,6 +55,8 @@
@@ -887,22 +887,23 @@ index 3e9ca38512..58ad3c2c95 100644
  	/*
  	 * When joining the competition; the existing tasks will be,
  	 * on average, halfway through their slice, as such start tasks
-@@ -7136,6 +7176,14 @@ static int dequeue_entities(struct rq *rq, struct sched_entity *se, int flags)
- 		idle_h_nr_running = task_has_idle_policy(p);
- 		if (!task_sleep && !task_delayed)
- 			h_nr_delayed = !!se->sched_delayed;
+@@ -7240,6 +7280,15 @@ static bool dequeue_task_fair(struct rq *rq, struct task_struct *p, int flags)
+ 		util_est_dequeue(&rq->cfs, p);
+ 
+ 	util_est_update(&rq->cfs, p, flags & DEQUEUE_SLEEP);
 +#ifdef CONFIG_SCHED_BORE
-+		if (task_sleep) {
-+			cfs_rq = cfs_rq_of(se);
-+			if (cfs_rq->curr == se)
-+				update_curr(cfs_rq);
-+			restart_burst(se);
-+		}
++	struct cfs_rq *cfs_rq = &rq->cfs;
++	struct sched_entity *se = &p->se;
++	if (flags & DEQUEUE_SLEEP && entity_is_task(se)) {
++		if (cfs_rq->curr == se)
++			update_curr(cfs_rq);
++		restart_burst(se);
++	}
 +#endif // CONFIG_SCHED_BORE
- 	} else {
- 		cfs_rq = group_cfs_rq(se);
- 		slice = cfs_rq_min_slice(cfs_rq);
-@@ -9053,16 +9101,25 @@ static void yield_task_fair(struct rq *rq)
+ 	if (dequeue_entities(rq, &p->se, flags) < 0)
+ 		return false;
+ 
+@@ -9053,16 +9102,25 @@ static void yield_task_fair(struct rq *rq)
  	/*
  	 * Are we the only task in the tree?
  	 */
@@ -928,7 +929,7 @@ index 3e9ca38512..58ad3c2c95 100644
  	/*
  	 * Tell update_rq_clock() that we've just updated,
  	 * so we don't do microscopic update in schedule()
-@@ -13114,6 +13171,9 @@ static void task_tick_fair(struct rq *rq, struct task_struct *curr, int queued)
+@@ -13114,6 +13172,9 @@ static void task_tick_fair(struct rq *rq, struct task_struct *curr, int queued)
  static void task_fork_fair(struct task_struct *p)
  {
  	set_task_max_allowed_capacity(p);
@@ -938,7 +939,7 @@ index 3e9ca38512..58ad3c2c95 100644
  }
  
  /*
-@@ -13224,6 +13284,10 @@ static void attach_task_cfs_rq(struct task_struct *p)
+@@ -13224,6 +13285,10 @@ static void attach_task_cfs_rq(struct task_struct *p)
  
  static void switched_from_fair(struct rq *rq, struct task_struct *p)
  {

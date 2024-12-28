@@ -51,9 +51,11 @@ export _NUMAdisable=""
 # Transparent Hugepages { always, madvise }
 export _hugepage="always"
 
-# Running tick rate { 1000, 800, 600, 500 }
+# Running tick rate { 1000, 800, 750, 600, 500 }
 # Select 1000 if your machine has less than or equal to 16 CPUs.
-# Otherwise, the best value is a mystery. If unsure, select 1000.
+# Select 800 if you want a balance between latency and performance,
+# with more focus on latency. Otherwise, the best value is a mystery.
+# If unsure, select 1000.
 export _HZ_ticks="1000"
 
 # Select tickless type { full, idle }
