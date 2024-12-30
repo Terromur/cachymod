@@ -776,18 +776,15 @@ gcc12/build workarounds
 
 --- linux-6.9.1/arch/x86/Makefile~	2024-05-17 10:18:09.000000000 +0000
 +++ linux-6.9.1/arch/x86/Makefile	2024-05-17 18:54:31.463961414 +0000
-@@ -70,9 +70,9 @@
+@@ -70,7 +70,7 @@
  #
  #    https://gcc.gnu.org/bugzilla/show_bug.cgi?id=53383
  #
 -KBUILD_CFLAGS += -mno-sse -mno-mmx -mno-sse2 -mno-3dnow -mno-avx
-+KBUILD_CFLAGS += -mno-sse -mno-mmx -mno-sse2 -mno-3dnow -mno-avx -mno-avx2 -mno-avx512f
++KBUILD_CFLAGS += -mno-sse -mno-mmx -mno-sse2 -mno-3dnow -mno-avx -mno-avx2
  KBUILD_RUSTFLAGS += --target=$(objtree)/scripts/target.json
--KBUILD_RUSTFLAGS += -Ctarget-feature=-sse,-sse2,-sse3,-ssse3,-sse4.1,-sse4.2,-avx,-avx2
-+KBUILD_RUSTFLAGS += -Ctarget-feature=-sse,-sse2,-sse3,-ssse3,-sse4.1,-sse4.2,-avx,-avx2,-avx512f
+ KBUILD_RUSTFLAGS += -Ctarget-feature=-sse,-sse2,-sse3,-ssse3,-sse4.1,-sse4.2,-avx,-avx2
  
- #
- # CFLAGS for compiling floating point code inside the kernel.
 -- 
 2.45.2
 
