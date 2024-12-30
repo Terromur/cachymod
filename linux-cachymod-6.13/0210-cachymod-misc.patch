@@ -1,27 +1,4 @@
 
-Move PREEMPT_RT before PREEMPT in vermagic.
-https://lore.kernel.org/all/fedd0c6b-a870-4b8f-8f52-6e11df936678@suse.com/
-
-diff --git a/include/linux/vermagic.h b/include/linux/vermagic.h
---- a/include/linux/vermagic.h
-+++ b/include/linux/vermagic.h
-@@ -15,10 +15,10 @@
- #else
- #define MODULE_VERMAGIC_SMP ""
- #endif
--#ifdef CONFIG_PREEMPT_BUILD
--#define MODULE_VERMAGIC_PREEMPT "preempt "
--#elif defined(CONFIG_PREEMPT_RT)
-+#ifdef CONFIG_PREEMPT_RT
- #define MODULE_VERMAGIC_PREEMPT "preempt_rt "
-+#elif defined(CONFIG_PREEMPT_BUILD)
-+#define MODULE_VERMAGIC_PREEMPT "preempt "
- #else
- #define MODULE_VERMAGIC_PREEMPT ""
- #endif
--- 
-2.34.1
-
 Curated patches from XanMod Linux
 https://gitlab.com/xanmod/linux-patches
 
