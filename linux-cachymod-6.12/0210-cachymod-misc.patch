@@ -1,4 +1,90 @@
 
+sched_ext: Always call put_prev_task() with scx_enabled
+https://lore.kernel.org/lkml/20241013173928.20738-1-andrea.righi@linux.dev/T/#u
+
+From: Andrea Righi @ 2024-10-13 17:39 UTC (permalink / raw)
+  To: Tejun Heo, David Vernet, Peter Zijlstra, Ingo Molnar, Juri Lelli,
+	Vincent Guittot
+  Cc: Dietmar Eggemann, Steven Rostedt, Ben Segall, Mel Gorman,
+	Valentin Schneider, linux-kernel
+
+With the consolidation of put_prev_task/set_next_task(), we are now
+skipping the sched_ext ops.stopping/running() transitions when the
+previous and next tasks are the same, see commit 436f3eed5c69 ("sched:
+Combine the last put_prev_task() and the first set_next_task()").
+
+While this optimization makes sense in general, it can negatively impact
+performance in some user-space schedulers, that expect to handle such
+transitions when tasks exhaust their timeslice (see SCX_OPS_ENQ_LAST).
+
+For example, scx_rustland suffers a significant performance regression
+(e.g., gaming benchmarks drop from ~60fps to ~10fps).
+
+To fix this, ensure that put_prev_task()/set_next_task() are never
+skipped when the scx scheduling class is enabled, allowing the scx class
+to handle such transitions.
+
+This change restores the previous behavior, fixing the performance
+regression in scx_rustland.
+
+Link: https://github.com/sched-ext/scx/issues/788
+Fixes: 7c65ae81ea86 ("sched_ext: Don't call put_prev_task_scx() before picking the next task")
+Signed-off-by: Andrea Righi <andrea.righi@linux.dev>
+---
+ kernel/sched/sched.h | 30 +++++++++++++++---------------
+ 1 file changed, 15 insertions(+), 15 deletions(-)
+
+diff --git a/kernel/sched/sched.h b/kernel/sched/sched.h
+index 6085ef50febf..44d736e49d06 100644
+--- a/kernel/sched/sched.h
++++ b/kernel/sched/sched.h
+@@ -2470,21 +2470,6 @@ __put_prev_set_next_dl_server(struct rq *rq,
+ 	rq->dl_server = NULL;
+ }
+ 
+-static inline void put_prev_set_next_task(struct rq *rq,
+-					  struct task_struct *prev,
+-					  struct task_struct *next)
+-{
+-	WARN_ON_ONCE(rq->curr != prev);
+-
+-	__put_prev_set_next_dl_server(rq, prev, next);
+-
+-	if (next == prev)
+-		return;
+-
+-	prev->sched_class->put_prev_task(rq, prev, next);
+-	next->sched_class->set_next_task(rq, next, true);
+-}
+-
+ /*
+  * Helper to define a sched_class instance; each one is placed in a separate
+  * section which is ordered by the linker script:
+@@ -2523,6 +2508,21 @@ DECLARE_STATIC_KEY_FALSE(__scx_switched_all);	/* all fair class tasks on SCX */
+ #define scx_switched_all()	false
+ #endif /* !CONFIG_SCHED_CLASS_EXT */
+ 
++static inline void put_prev_set_next_task(struct rq *rq,
++					  struct task_struct *prev,
++					  struct task_struct *next)
++{
++	WARN_ON_ONCE(rq->curr != prev);
++
++	__put_prev_set_next_dl_server(rq, prev, next);
++
++	if (next == prev && !scx_enabled())
++		return;
++
++	prev->sched_class->put_prev_task(rq, prev, next);
++	next->sched_class->set_next_task(rq, next, true);
++}
++
+ /*
+  * Iterate only active classes. SCX can take over all fair tasks or be
+  * completely disabled. If the former, skip fair. If the latter, skip SCX.
+-- 
+2.47.0
+
 Move PREEMPT_RT before PREEMPT in vermagic.
 https://lore.kernel.org/all/fedd0c6b-a870-4b8f-8f52-6e11df936678@suse.com/
 
