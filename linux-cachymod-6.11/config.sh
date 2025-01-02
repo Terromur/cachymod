@@ -58,7 +58,7 @@ scripts/config -e NTSYNC
 ### hugetlb_free_vmemmap=off (cmdline) or vm.hugetlb_optimize_vmemmap (sysctl).
 scripts/config -e HUGETLB_PAGE_OPTIMIZE_VMEMMAP_DEFAULT_ON
 
-### Disable hardware montitors.
+### Disable hardware monitors.
 scripts/config -d IGB_HWMON
 scripts/config -d IXGBE_HWMON
 scripts/config -d TIGON3_HWMON
@@ -103,6 +103,7 @@ scripts/config -d LEDS_TRIGGER_CPU
 scripts/config -d LEDS_TRIGGER_GPIO
 scripts/config -d MEMTEST
 scripts/config -d PCIEAER_INJECT
+scripts/config -d PCIE_ECRC
 scripts/config -d GENERIC_IRQ_DEBUGFS
 scripts/config -d GENERIC_IRQ_INJECTION
 scripts/config -d FUNCTION_ERROR_INJECTION
@@ -141,6 +142,7 @@ scripts/config -d DEBUG_BUGVERBOSE
 scripts/config -d DEBUG_MEMORY_INIT
 scripts/config -d DEBUG_RODATA_TEST
 scripts/config -d DEBUG_RSEQ
+scripts/config -d DEBUG_SHIRQ
 scripts/config -d DEBUG_WX
 scripts/config -d DLM_DEBUG
 scripts/config -d DM_DEBUG_BLOCK_MANAGER_LOCKING
@@ -218,11 +220,17 @@ if [[ $(uname -m) = *"x86"* ]]; then
     ### Disable the Contiguous Memory Allocator.
     scripts/config -d CMA
 
+    ### Disable DAMON: Data Access Monitoring Framework.
+    scripts/config -d DAMON
+
     ### Disable HWPoison pages injector.
     scripts/config -d HWPOISON_INJECT
 
     ### Disable track memory changes and idle page tracking.
     scripts/config -d MEM_SOFT_DIRTY -d IDLE_PAGE_TRACKING
+
+    ### Disable paravirtual steal time accounting.
+    scripts/config -d PARAVIRT_TIME_ACCOUNTING
 
     ### Require boot param to enable pressure stall information tracking.
     scripts/config -e PSI_DEFAULT_DISABLED
