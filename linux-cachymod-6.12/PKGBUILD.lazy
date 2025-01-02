@@ -58,15 +58,16 @@ _preempt=${_preempt-full}
 # This does automatically detect your supported CPU and optimizes for it
 _use_auto_optimization=${_use_auto_optimization-y}
 
-# CPU compiler optimizations (overrides _use_auto_optimization)
+# Select CPU compiler optimization (overrides _use_auto_optimization)
 # { native_amd, native_intel, zen, zen2, zen3, zen4, generic,
-#   generic_v1, generic_v2, generic_v3, generic_v4, sandybridge,
-#   ivybridge, haswell, skylake, icelake, tigerlake, alderlake }
+#   generic_v1, generic_v2, generic_v3, generic_v4, core2, sandybridge,
+#   ivybridge, haswell, broadwell, skylake, skylakex, icelake, tigerlake,
+#   sapphirerapids, alderlake, raptorlake, meteorlake, emeraldrapids }
 _processor_opt=${_processor_opt-}
 
 # Select build type { full, thin, polly, clang, gcc }
 # full:  Build the kernel with clang (full LTO), suffix "-lto"
-#        Uses 1 thread for linking, slow and uses more memory (>14GB),
+#        Uses 1 thread for linking, slow and uses more memory (>16GB),
 #        theoretically with the highest performance gains
 # thin:  Build the kernel with clang (thin LTO), suffix "-lto"
 #        Uses multiple threads, faster and lesser memory consumption,
@@ -92,12 +93,12 @@ else
 fi
 
 _major=6.12
-_minor=7
+_minor=8
 pkgver=${_major}.${_minor}
 _stable=${_major}.${_minor}
 _srcname=linux-${_stable}
 pkgdesc='Linux BORE + Lazy Preemption + Cachy Sauce Kernel by CachyOS with other patches and improvements'
-pkgrel=3
+pkgrel=1
 _kernver="$pkgver-$pkgrel"
 _kernuname="${pkgver}-${_pkgsuffix}"
 arch=('x86_64')
@@ -181,13 +182,15 @@ prepare() {
         if [ "$MARCH" != "GENERIC" ]; then
             if [[ "$MARCH" =~ GENERIC_V[1-4] ]]; then
                 X86_64_LEVEL="${MARCH//GENERIC_V}"
+                echo "Selecting CPU (X86_64_VERSION) : ${X86_64_LEVEL}"
                 scripts/config --set-val X86_64_VERSION "${X86_64_LEVEL}"
             else
+                echo "Selecting CPU (MARCH) : ${MARCH}"
                 scripts/config -k -d CONFIG_GENERIC_CPU
                 scripts/config -k -e "CONFIG_M${MARCH}"
             fi
         fi
-    elif [ -n "$_use_auto_optimization" ]; then
+    elif [ "$_use_auto_optimization" = "y" ]; then
         ### Use automatic CPU optimization
         "${srcdir}"/auto-cpu-optimization.sh
     fi
@@ -201,7 +204,7 @@ prepare() {
     scripts/config -e SCHED_BORE
 
     ### Enable sched_ext scheduler
-    if [[ -n "$_enable_sched_ext" && "$_preempt" != "rt" ]]; then
+    if [[ "$_enable_sched_ext" = "y" && "$_preempt" != "rt" ]]; then
         echo "Enabling the sched_ext (SCX) scheduler..."
         scripts/config -e SCHED_CLASS_EXT
     else
@@ -249,7 +252,7 @@ prepare() {
     echo "Setting tick rate to ${_HZ_ticks} Hz..."
 
     ### Disable NUMA
-    if [ -n "$_NUMAdisable" ]; then
+    if [ "$_NUMAdisable" = "y" ]; then
         echo "Disabling NUMA from kernel config..."
         scripts/config -d NUMA \
             -d AMD_NUMA \
@@ -339,7 +342,7 @@ prepare() {
     fi
 
     ### Optionally run the trim.sh script to trim the kernel
-    if [[ -n "$_runtrim_script" && -s "${srcdir}"/trim.sh ]]; then
+    if [[ "$_runtrim_script" = "y" && -s "${srcdir}"/trim.sh ]]; then
         echo "Further kernel trimming. Running trim.sh script..."
         bash "${srcdir}"/trim.sh
     fi
@@ -349,7 +352,8 @@ prepare() {
     ### This requires disabling the ananicy-cpp service or will segfault
     ### Hence, if you do not use these things, want to save time building,
     ### and unlikely to decode a stack trace later
-    if [[ -n "$_disable_debug_info" && -z "$_enable_sched_ext" ]]; then
+    if [[ "$_disable_debug_info" = "y" ]]; then
+      if [[ -z "$_enable_sched_ext" || "$_enable_sched_ext" = "n" ]]; then
         echo "More kernel trimming. Disabling DEBUG_INFO knobs..."
         scripts/config -d GDB_SCRIPTS
         scripts/config -d DEBUG_INFO
@@ -364,11 +368,12 @@ prepare() {
         # Remove the BPF (Berkeley Packet Filter) from the list
         # CONFIG_LSM="landlock,lockdown,yama,integrity,bpf"
         scripts/config --set-str LSM "landlock,lockdown,yama,integrity"
+      fi
     fi
 
     ### Optionally load needed modules for the make localmodconfig
     # See https://aur.archlinux.org/packages/modprobed-db
-    if [[ -n "$_localmodcfg" ]]; then
+    if [ "$_localmodcfg" = "y" ]; then
         if [ -e "$_localmodcfg_path" ]; then
             echo "Running Steven Rostedt's make localmodconfig now"
             make "${BUILD_FLAGS[@]}" LSMOD="${_localmodcfg_path}" localmodconfig
@@ -387,10 +392,10 @@ prepare() {
     echo "Prepared $pkgbase version $(<version)"
 
     ### Running make nconfig
-    [[ -z "$_makenconfig" ]] ||  make "${BUILD_FLAGS[@]}" nconfig
+    [ "$_makenconfig" = "y" ] && make "${BUILD_FLAGS[@]}" nconfig
 
     ### Running make gconfig
-    [[ -z "$_makegconfig" ]] ||  make "${BUILD_FLAGS[@]}" gconfig
+    [ "$_makegconfig" = "y" ] && make "${BUILD_FLAGS[@]}" gconfig
 
     ### Save configuration for later reuse
     echo "Save configuration for later reuse..."
@@ -407,7 +412,7 @@ build() {
 
     make "${BUILD_FLAGS[@]}" -j"$ncpu" all | \
        grep -Ev '^  (AS|AR|CC|LD|BT|CE|CO|GE|HO|IN|IP|MK|OB|PA|PE|PO|RE|ST|TA|TE|UN|UP|VD|X32)'
-    if [[ -z "$_disable_debug_info" ]]; then
+    if [[ -z "$_disable_debug_info" || "$_disable_debug_info" = "n" ]]; then
        make -C tools/bpf/bpftool vmlinux.h feature-clang-bpf-co-re=1 | \
           grep -Ev '^  (AS|AR|CC|LD|BT|CE|CO|GE|HO|IN|MK|OB|PA|PE|PO|RE|ST|TA|TE|UN|UP|VD|X32)'
     fi
@@ -423,7 +428,7 @@ build() {
 _package() {
     pkgdesc="The $pkgdesc kernel and modules"
     depends=('coreutils' 'kmod' 'initramfs')
-    [ -n "$_enable_sched_ext" ] && depends+=('scx-scheds')
+    [ "$_enable_sched_ext" = "y" ] && depends+=('scx-scheds')
     optdepends=('wireless-regdb: to set the correct wireless channels of your country'
                 'linux-firmware: firmware images needed for some devices'
                 'modprobed-db: Keeps track of EVERY kernel module that has ever been probed - useful for those of us who make localmodconfig'
@@ -467,7 +472,7 @@ _package-headers() {
     local builddir="$pkgdir/usr/lib/modules/$(<version)/build"
 
     echo "Installing build files..."
-    if [[ -z "$_disable_debug_info" ]]; then
+    if [[ -z "$_disable_debug_info" || "$_disable_debug_info" = "n" ]]; then
         install -Dt "$builddir" -m644 .config Makefile Module.symvers System.map \
             localversion.* version vmlinux tools/bpf/bpftool/vmlinux.h
     else
