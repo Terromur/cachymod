@@ -5,7 +5,7 @@
 set -e
 
 ############################################################
-# Build options for the lazy variant.
+# Build options. Unless selections given, answer "y" or "".
 ############################################################
 
 # Run the "trim.sh" script to trim the kernel
@@ -77,13 +77,14 @@ export _use_auto_optimization="y"
 
 # Select CPU compiler optimization (overrides _use_auto_optimization)
 # { native_amd, native_intel, zen, zen2, zen3, zen4, generic,
-#   generic_v1, generic_v2, generic_v3, generic_v4, sandybridge,
-#   ivybridge, haswell, skylake, icelake, tigerlake, alderlake }
+#   generic_v1, generic_v2, generic_v3, generic_v4, core2, sandybridge,
+#   ivybridge, haswell, broadwell, skylake, skylakex, icelake, tigerlake,
+#   sapphirerapids, alderlake, raptorlake, meteorlake, emeraldrapids }
 export _processor_opt=""
 
 # Select build type { full, thin, polly, clang, gcc }
 # full:  Build the kernel with clang (full LTO), suffix "-lto"
-#        Uses 1 thread for linking, slow and uses more memory (>14GB),
+#        Uses 1 thread for linking, slow and uses more memory (>16GB),
 #        theoretically with the highest performance gains
 # thin:  Build the kernel with clang (thin LTO), suffix "-lto"
 #        Uses multiple threads, faster and lesser memory consumption,
