@@ -3,10 +3,12 @@ Patch for setting the optimal base slice for the configured HZ.
 Useful for running the kernel with EEVDF only, without BORE effect.
 Original code by Masahito Suzuki (BORE CPU Scheduler).
 
+Signed-off-by: Mario Roy <...>
+
 diff -uarp a/include/linux/sched.h b/include/linux/sched.h
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -543,7 +552,8 @@ struct sched_entity {
+@@ -543,7 +543,8 @@ struct sched_entity {
  	u64				min_vruntime;
  
  	struct list_head		group_node;
@@ -150,7 +152,7 @@ diff -uarp a/kernel/sched/debug.c b/kernel/sched/debug.c
 diff -uarp a/kernel/sched/fair.c b/kernel/sched/fair.c
 --- a/kernel/sched/fair.c
 +++ b/kernel/sched/fair.c
-@@ -64,17 +66,30 @@
+@@ -64,17 +64,30 @@
   *   SCHED_TUNABLESCALING_LOG - scaled logarithmically, *1+ilog(ncpus)
   *   SCHED_TUNABLESCALING_LINEAR - scaled linear, *ncpus
   *
@@ -184,7 +186,7 @@ diff -uarp a/kernel/sched/fair.c b/kernel/sched/fair.c
  
  const_debug unsigned int sysctl_sched_migration_cost	= 500000UL;
  
-@@ -188,6 +203,13 @@ static inline void update_load_set(struc
+@@ -188,6 +201,13 @@ static inline void update_load_set(struc
   *
   * This idea comes from the SD scheduler of Con Kolivas:
   */
@@ -198,7 +200,7 @@ diff -uarp a/kernel/sched/fair.c b/kernel/sched/fair.c
  static unsigned int get_update_sysctl_factor(void)
  {
  	unsigned int cpus = min_t(unsigned int, num_online_cpus(), 8);
-@@ -218,6 +240,7 @@ static void update_sysctl(void)
+@@ -218,6 +238,7 @@ static void update_sysctl(void)
  	SET_SYSCTL(sched_base_slice);
  #undef SET_SYSCTL
  }
@@ -206,7 +208,7 @@ diff -uarp a/kernel/sched/fair.c b/kernel/sched/fair.c
  
  void __init sched_init_granularity(void)
  {
-@@ -695,6 +718,9 @@ static s64 entity_lag(u64 avruntime, str
+@@ -695,6 +716,9 @@ static s64 entity_lag(u64 avruntime, str
  
  	vlag = avruntime - se->vruntime;
  	limit = calc_delta_fair(max_t(u64, 2*se->slice, TICK_NSEC), se);
@@ -216,7 +218,18 @@ diff -uarp a/kernel/sched/fair.c b/kernel/sched/fair.c
  
  	return clamp(vlag, -limit, limit);
  }
-@@ -954,6 +984,7 @@ struct sched_entity *__pick_last_entity(
+@@ -896,6 +920,10 @@ static struct sched_entity *pick_eevdf(s
+ 	 * until it gets a new slice. See the HACK in set_next_entity().
+ 	 */
+ 	if (sched_feat(RUN_TO_PARITY) && curr && curr->vlag == curr->deadline)
++#ifdef CONFIG_SCHED_BORE
++		/* Adaptively disabled if more than 2 tasks in a CFQ runqueue */
++		if (cfs_rq->nr_running <= 2)
++#endif // CONFIG_SCHED_BORE
+ 		return curr;
+ 
+ 	/* Pick the leftmost entity if it's eligible */
+@@ -954,6 +982,7 @@ struct sched_entity *__pick_last_entity(
   * Scheduling class statistics methods:
   */
  #ifdef CONFIG_SMP
@@ -224,7 +237,7 @@ diff -uarp a/kernel/sched/fair.c b/kernel/sched/fair.c
  int sched_update_scaling(void)
  {
  	unsigned int factor = get_update_sysctl_factor();
-@@ -965,6 +996,7 @@ int sched_update_scaling(void)
+@@ -965,6 +994,7 @@ int sched_update_scaling(void)
  
  	return 0;
  }
@@ -232,7 +245,7 @@ diff -uarp a/kernel/sched/fair.c b/kernel/sched/fair.c
  #endif
  #endif
  
-@@ -5198,6 +5234,9 @@ place_entity(struct cfs_rq *cfs_rq, stru
+@@ -5198,6 +5228,9 @@ place_entity(struct cfs_rq *cfs_rq, stru
  	 *
  	 * EEVDF: placement strategy #1 / #2
  	 */
@@ -242,7 +255,7 @@ diff -uarp a/kernel/sched/fair.c b/kernel/sched/fair.c
  	if (sched_feat(PLACE_LAG) && cfs_rq->nr_running) {
  		struct sched_entity *curr = cfs_rq->curr;
  		unsigned long load;
-@@ -5268,6 +5307,12 @@ place_entity(struct cfs_rq *cfs_rq, stru
+@@ -5268,12 +5301,22 @@ place_entity(struct cfs_rq *cfs_rq, stru
  
  	se->vruntime = vruntime - lag;
  
@@ -255,7 +268,17 @@ diff -uarp a/kernel/sched/fair.c b/kernel/sched/fair.c
  	/*
  	 * When joining the competition; the existing tasks will be,
  	 * on average, halfway through their slice, as such start tasks
-@@ -5377,6 +5426,7 @@ static __always_inline void return_cfs_r
+ 	 * off with half a slice to ease into the competition.
+ 	 */
++#ifdef CONFIG_SCHED_BORE
++	if (sched_feat(PLACE_DEADLINE_INITIAL) && (flags & (ENQUEUE_INITIAL | ENQUEUE_WAKEUP)))
++#else
+ 	if (sched_feat(PLACE_DEADLINE_INITIAL) && (flags & ENQUEUE_INITIAL))
++#endif // CONFIG_SCHED_BORE
+ 		vslice /= 2;
+ 
+ 	/*
+@@ -5377,6 +5420,7 @@ static __always_inline void return_cfs_r
  static void
  dequeue_entity(struct cfs_rq *cfs_rq, struct sched_entity *se, int flags)
  {
@@ -263,7 +286,7 @@ diff -uarp a/kernel/sched/fair.c b/kernel/sched/fair.c
  	int action = UPDATE_TG;
  
  	if (entity_is_task(se) && task_on_rq_migrating(task_of(se)))
-@@ -5404,6 +5454,11 @@ dequeue_entity(struct cfs_rq *cfs_rq, st
+@@ -5404,6 +5448,11 @@ dequeue_entity(struct cfs_rq *cfs_rq, st
  	clear_buddies(cfs_rq, se);
  
  	update_entity_lag(cfs_rq, se);

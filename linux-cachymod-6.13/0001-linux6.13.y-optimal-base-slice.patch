@@ -3,6 +3,8 @@ Patch for setting the optimal base slice for the configured HZ.
 Useful for running the kernel with EEVDF only, without BORE effect.
 Original code by Masahito Suzuki (BORE CPU Scheduler).
 
+Signed-off-by: Mario Roy <...>
+
 diff -uarp a/init/Kconfig b/init/Kconfig
 --- a/init/Kconfig
 +++ b/init/Kconfig
@@ -137,7 +139,7 @@ diff -uarp a/kernel/sched/debug.c b/kernel/sched/debug.c
 diff -uarp a/kernel/sched/fair.c b/kernel/sched/fair.c
 --- a/kernel/sched/fair.c
 +++ b/kernel/sched/fair.c
-@@ -64,17 +66,30 @@
+@@ -64,17 +64,30 @@
   *   SCHED_TUNABLESCALING_LOG - scaled logarithmically, *1+ilog(ncpus)
   *   SCHED_TUNABLESCALING_LINEAR - scaled linear, *ncpus
   *
@@ -171,7 +173,7 @@ diff -uarp a/kernel/sched/fair.c b/kernel/sched/fair.c
  
  const_debug unsigned int sysctl_sched_migration_cost	= 500000UL;
  
-@@ -188,6 +203,13 @@ static inline void update_load_set(struc
+@@ -188,6 +201,13 @@ static inline void update_load_set(struc
   *
   * This idea comes from the SD scheduler of Con Kolivas:
   */
@@ -185,7 +187,7 @@ diff -uarp a/kernel/sched/fair.c b/kernel/sched/fair.c
  static unsigned int get_update_sysctl_factor(void)
  {
  	unsigned int cpus = min_t(unsigned int, num_online_cpus(), 8);
-@@ -218,6 +240,7 @@ static void update_sysctl(void)
+@@ -218,6 +238,7 @@ static void update_sysctl(void)
  	SET_SYSCTL(sched_base_slice);
  #undef SET_SYSCTL
  }
@@ -193,7 +195,7 @@ diff -uarp a/kernel/sched/fair.c b/kernel/sched/fair.c
  
  void __init sched_init_granularity(void)
  {
-@@ -695,6 +718,9 @@ static s64 entity_lag(u64 avruntime, str
+@@ -695,6 +716,9 @@ static s64 entity_lag(u64 avruntime, str
  
  	vlag = avruntime - se->vruntime;
  	limit = calc_delta_fair(max_t(u64, 2*se->slice, TICK_NSEC), se);
@@ -203,7 +205,18 @@ diff -uarp a/kernel/sched/fair.c b/kernel/sched/fair.c
  
  	return clamp(vlag, -limit, limit);
  }
-@@ -984,6 +1014,7 @@ struct sched_entity *__pick_last_entity(
+@@ -926,6 +950,10 @@ static struct sched_entity *pick_eevdf(s
+ 	 * until it gets a new slice. See the HACK in set_next_entity().
+ 	 */
+ 	if (sched_feat(RUN_TO_PARITY) && curr && curr->vlag == curr->deadline)
++#ifdef CONFIG_SCHED_BORE
++		/* Adaptively disabled if more than 2 tasks in a CFQ runqueue */
++		if (cfs_rq->nr_running <= 2)
++#endif // CONFIG_SCHED_BORE
+ 		return curr;
+ 
+ 	/* Pick the leftmost entity if it's eligible */
+@@ -984,6 +1012,7 @@ struct sched_entity *__pick_last_entity(
   * Scheduling class statistics methods:
   */
  #ifdef CONFIG_SMP
@@ -211,7 +224,7 @@ diff -uarp a/kernel/sched/fair.c b/kernel/sched/fair.c
  int sched_update_scaling(void)
  {
  	unsigned int factor = get_update_sysctl_factor();
-@@ -995,6 +1026,7 @@ int sched_update_scaling(void)
+@@ -995,6 +1024,7 @@ int sched_update_scaling(void)
  
  	return 0;
  }
@@ -219,6 +232,18 @@ diff -uarp a/kernel/sched/fair.c b/kernel/sched/fair.c
  #endif
  #endif
  
+@@ -5370,7 +5400,11 @@ place_entity(struct cfs_rq *cfs_rq, stru
+ 	 * on average, halfway through their slice, as such start tasks
+ 	 * off with half a slice to ease into the competition.
+ 	 */
++#ifdef CONFIG_SCHED_BORE
++	if (sched_feat(PLACE_DEADLINE_INITIAL) && (flags & (ENQUEUE_INITIAL | ENQUEUE_WAKEUP)))
++#else
+ 	if (sched_feat(PLACE_DEADLINE_INITIAL) && (flags & ENQUEUE_INITIAL))
++#endif // CONFIG_SCHED_BORE
+ 		vslice /= 2;
+ 
+ 	/*
 diff -uarp a/kernel/sched/sched.h b/kernel/sched/sched.h
 --- a/kernel/sched/sched.h
 +++ b/kernel/sched/sched.h
