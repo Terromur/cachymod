@@ -13,17 +13,22 @@
 ### BUILD OPTIONS
 # Set these variables to ANYTHING that is not null or choose proper variable to enable them
 
-### Tweak kernel options prior to a build via nconfig or gconfig
+# The default is patching the kernel with the complete BORE CPU scheduler
+# If you prefer EEVDF, only the BORE optimal base slice logic is applied
+# The kernel will be tagged "eevdf" or "bore"
+_prefer_eevdf=${_prefer_eevdf-}
+
+# Tweak kernel options prior to a build via nconfig or gconfig
 _makenconfig=${_makenconfig-}
 _makegconfig=${_makegconfig-}
 
 # NUMA is optimized for multi-socket motherboards.
-# A single multi-core CPU actually runs slower with NUMA enabled.
+# A single multi-core CPU actually runs slower with NUMA enabled
 # See, https://bugs.archlinux.org/task/31187
 # It seems that in 2023 this is not really a huge regression anymore
 _NUMAdisable=${_NUMAdisable-}
 
-### Transparent Hugepages
+# Transparent Hugepages
 # ATTENTION - one of two predefined values should be selected!
 # 'always'  - always enable THP
 # 'madvise' - madvise, prevent applications from allocating more memory resources than necessary
@@ -44,15 +49,15 @@ _localmodcfg=${_localmodcfg-}
 # Path to the list of used modules
 _localmodcfg_path=${_localmodcfg_path-"$HOME/.config/modprobed.db"}
 
-### Running with a 1000HZ, 800Hz, 750Hz, 600Hz, or 500Hz tick rate
+# Running with a 1000HZ, 800Hz, 750Hz, 600Hz, or 500Hz tick rate
 _HZ_ticks=${_HZ_ticks-1000}
 
-### Choose between full or idle tickless type
-### Full tickless can give higher performances in various cases but, depending on
-### hardware, lower consistency. Idle (without rcu_nocb_cpu) may reduce stutters.
+# Choose between full or idle tickless type
+# Full tickless can give higher performances in various cases but, depending on
+# hardware, lower consistency. Idle (without rcu_nocb_cpu) may reduce stutters.
 _ticktype=${_ticktype-full}
 
-### Choose between rt(real-time), full(low-latency), or lazy(prefer throughput)
+# Choose between rt(real-time), full(low-latency), or lazy(prefer throughput)
 _preempt=${_preempt-full}
 
 # This does automatically detect your supported CPU and optimizes for it
@@ -85,13 +90,6 @@ else
     buildtype="$_buildtype"
 fi
 
-pkgbase="linux-$_pkgsuffix"
-if [ "$_preempt" = "rt" ]; then
-    pkgbase="${pkgbase}-${buildtype}-rt"
-else
-    pkgbase="${pkgbase}-${buildtype}"
-fi
-
 _major=6.13
 _minor=0
 #pkgver=${_major}.${_minor}
@@ -104,7 +102,7 @@ _stable=${_major}-${_rcver}
 
 _srcname=linux-${_stable}
 pkgdesc='Linux BORE + Lazy Preemption + Cachy Sauce Kernel by CachyOS with other patches and improvements'
-pkgrel=3
+pkgrel=4
 _kernver="$pkgver-$pkgrel"
 _kernuname="${pkgver}-${_pkgsuffix}"
 arch=('x86_64')
@@ -125,11 +123,20 @@ source=(
     "0001-rt.patch"
     "0001-cachyos-base-all.patch"
     "0001-sched-fair-remove-cachy-mods.patch"
-    "0001-linux6.13.y-bore.patch"
+)
+if [ "$_prefer_eevdf" = "y" ]; then
+    source+=("0001-linux6.13.y-optimal-base-slice.patch")
+    buildtag="eevdf"
+else
+    source+=("0001-linux6.13.y-bore.patch")
+    buildtag="bore"
+fi
+source+=(
     "0002-kconfig-add-800Hz.patch"
     "0100-mm-kconfig-enable-rt-thp.patch"
     "0200-clearlinux-extras.patch"
-    "0210-cachymod-misc.patch")
+    "0210-cachymod-misc.patch"
+)
 
 # LLVM makedepends
 if [[ "$buildtype" = "lto" || "$buildtype" = "clang" ]]; then
@@ -150,6 +157,13 @@ fi
 [ -n "$_extra_patch_or_url3" ] && source+=("$_extra_patch_or_url3")
 [ -n "$_extra_patch_or_url4" ] && source+=("$_extra_patch_or_url4")
 [ -n "$_extra_patch_or_url5" ] && source+=("$_extra_patch_or_url5")
+
+pkgbase="linux-$_pkgsuffix"
+if [ "$_preempt" = "rt" ]; then
+    pkgbase="${pkgbase}-${buildtag}-${buildtype}-rt"
+else
+    pkgbase="${pkgbase}-${buildtag}-${buildtype}"
+fi
 
 export KBUILD_BUILD_HOST=cachyos
 export KBUILD_BUILD_USER="$pkgbase"
@@ -455,7 +469,7 @@ _package() {
     echo "$pkgbase" | install -Dm644 /dev/stdin "$modulesdir/pkgbase"
 
     # Include mkinitcpio preset file, excluding PRESETS 'fallback'
-    [ "$_preempt" = "rt" ] && flavour="${buildtype}-rt" || flavour="${buildtype}"
+    [ "$_preempt" = "rt" ] && flavour="${buildtag}-${buildtype}-rt" || flavour="${buildtag}-${buildtype}"
 
     install -Dm644 "${srcdir}/mkinitcpio.template" \
         "${pkgdir}/etc/mkinitcpio.d/linux-cachymod-613-${flavour}.preset"

@@ -8,6 +8,11 @@ set -e
 # Build options. Unless selections given, answer "y" or "".
 ############################################################
 
+# The default is patching the kernel with the complete BORE CPU scheduler.
+# If you prefer EEVDF, only the BORE optimal base slice logic is applied.
+# The kernel will be tagged "eevdf" or "bore".
+export _prefer_eevdf=""
+
 # Run the "trim.sh" script to trim the kernel
 # To deselect ~ 1,500 kernel options
 export _runtrim_script=""
@@ -69,7 +74,6 @@ export _ticktype="full"
 # Select "lazy" for low-latency desktop, matching the CachyOS RT kernel preemption.
 # Select "rt" for real-time preemption, running time-sensitive instruments.
 # The _enable_sched_ext build option is ignored for real-time preemption.
-# Kernel suffix is "lazy" for voluntary/full/lazy options; "lazy-rt" for rt.
 export _preempt="full"
 
 # Use automatic CPU optimization
@@ -111,5 +115,5 @@ export _buildtype="gcc"
 cp PKGBUILD.lazy PKGBUILD
 
 # Build kernel lazy and lazy-headers packages
-time nice -n 15 makepkg -scf --cleanbuild --skipinteg
+time nice -n 15 makepkg -scf --cleanbuild --skipinteg || exit 1
 

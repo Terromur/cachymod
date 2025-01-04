@@ -29,32 +29,32 @@ Select `_preempt=rt` for the realtime kernel.
 bash PKGBUILD.lazy.sh
 
 # lazy
-sudo pacman -U linux-cachymod-612-lto-{6,h}*.zst
-sudo pacman -U linux-cachymod-612-polly-{6,h}*.zst
-sudo pacman -U linux-cachymod-612-clang-{6,h}*.zst
-sudo pacman -U linux-cachymod-612-gcc-{6,h}*.zst
+sudo pacman -U linux-cachymod-612-bore-lto-{6,h}*.zst
+sudo pacman -U linux-cachymod-612-bore-polly-{6,h}*.zst
+sudo pacman -U linux-cachymod-612-bore-clang-{6,h}*.zst
+sudo pacman -U linux-cachymod-612-bore-gcc-{6,h}*.zst
 
 # lazy-rt
-sudo pacman -U linux-cachymod-612-lto-rt*.zst
-sudo pacman -U linux-cachymod-612-polly-rt*.zst
-sudo pacman -U linux-cachymod-612-clang-rt*.zst
-sudo pacman -U linux-cachymod-612-gcc-rt*.zst
+sudo pacman -U linux-cachymod-612-bore-lto-rt*.zst
+sudo pacman -U linux-cachymod-612-bore-polly-rt*.zst
+sudo pacman -U linux-cachymod-612-bore-clang-rt*.zst
+sudo pacman -U linux-cachymod-612-bore-gcc-rt*.zst
 ```
 
-Removal is via pacman as well. Change the kernel version and build
-type accordingly to { 611, 612, 613 } and { lto, polly, clang, gcc },
-respectively.
+Removal is via pacman as well. Change the kernel version, build tag,
+and build type accordingly to { 611, 612, 613 }, { bore, eevdf }, and
+{ lto, polly, clang, gcc }, respectively.
 
 ```text
 # lazy
 sudo pacman -Rsn \
-  linux-cachymod-612-gcc \
-  linux-cachymod-612-gcc-headers
+  linux-cachymod-612-bore-gcc \
+  linux-cachymod-612-bore-gcc-headers
 
 # lazy-rt
 sudo pacman -Rsn \
-  linux-cachymod-612-gcc-rt \
-  linux-cachymod-612-gcc-rt-headers
+  linux-cachymod-612-bore-gcc-rt \
+  linux-cachymod-612-bore-gcc-rt-headers
 ```
 
 The desired preemption can be specified with a kernel argument.
@@ -74,23 +74,63 @@ preempt=lazy
 
 ## Developer Notes
 
-1. The `PKGBUILD.lazy.sh` script creates the `PKGBUILD` file.
-
-2. I learned a lot making this project. Here's a tip.
+The `PKGBUILD.lazy.sh` script creates the `PKGBUILD` file.
 
 Feel free to copy the `PKGBUILD.lazy.sh` script and name it
 anything you like, and edit that file. I have four depending
-on the type of kernel I want to build. Optionally, add the
-`pacman` command to install the kernel.
+on the type of kernel I want to build.
 
 ```text
-# Fast localmod build including trim.
+# Fast localmod build.
 mario.fast
 mario.fast-rt
 
 # Same thing, but without localmod.
 mario.lazy
 mario.lazy-rt
+```
+
+Optionally, change the first build option to have one script
+for building bore or eevdf. Do this in your copy.
+
+```text
+export _prefer_eevdf="${_prefer_eevdf-}"
+```
+
+So now, I can build the eevdf or bore kernel with ease.
+
+```text
+_prefer_eevdf=y ./mario.fast
+_prefer_eevdf=  ./mario.fast
+```
+
+Optionally, append kernel installation steps at the end of the script.
+
+```text
+# Wait for pacman to finish
+
+while [ -e "/var/lib/pacman/db.lck" ]; do
+  # sleep $((1 + RANDOM % 9))
+    sleep 1
+done
+
+echo "Installing the kernel..."
+
+if [[ "$_buildtype" = "thin" || "$_buildtype" = "full" ]]; then
+    buildtype="lto"
+else
+    buildtype="$_buildtype"
+fi
+
+if [ "$_prefer_eevdf" = "y" ]; then
+    buildtag="eevdf"
+else
+    buildtag="bore"
+fi
+
+sudo pacman -U --noconfirm linux-cachymod-612-${buildtag}-${buildtype}-{6,h}*
+
+sync
 ```
 
 ## LICENSE
