@@ -57,8 +57,9 @@ _HZ_ticks=${_HZ_ticks-1000}
 # hardware, lower consistency. Idle (without rcu_nocb_cpu) may reduce stutters.
 _ticktype=${_ticktype-full}
 
-# Choose between rt(real-time), full(low-latency), or lazy(prefer throughput)
-_preempt=${_preempt-full}
+# Choose between rt (real-time), full (low-latency), lazy (prefer throughput),
+# or dynamic (runtime selectable none, voluntary, full, or lazy: default full)
+_preempt=${_preempt-dynamic}
 
 # This does automatically detect your supported CPU and optimizes for it
 _use_auto_optimization=${_use_auto_optimization-y}
@@ -96,7 +97,7 @@ pkgver=${_major}.${_minor}
 _stable=${_major}.${_minor}
 _srcname=linux-${_stable}
 pkgdesc='Linux BORE + Lazy Preemption + Cachy Sauce Kernel by CachyOS with other patches and improvements'
-pkgrel=16
+pkgrel=17
 _kernver="$pkgver-$pkgrel"
 _kernuname="${pkgver}-${_pkgsuffix}"
 arch=('x86_64')
@@ -144,7 +145,7 @@ source+=(
 # LLVM makedepends
 if [[ "$buildtype" = "lto" || "$buildtype" = "clang" ]]; then
     makedepends+=( clang llvm lld )
-    source+=("dkms-clang.patch")
+    source+=("dkms-clang.patch" "thinlto.patch")
     BUILD_FLAGS=( CC=clang LD=ld.lld LLVM=1 LLVM_IAS=1 )
 elif [[ "$buildtype" = "polly" ]]; then
     makedepends+=( clang llvm lld polly )
@@ -329,14 +330,15 @@ prepare() {
 
     case "$_preempt" in
         rt)
-            scripts/config -e PREEMPT_BUILD -d PREEMPT_NONE -d PREEMPT_VOLUNTARY -e PREEMPT -d PREEMPT_LAZY -d PREEMPT_LAZIEST -e PREEMPT_COUNT -e PREEMPTION -e PREEMPT_DYNAMIC -e PREEMPT_RT
-            ;;
+            scripts/config -d PREEMPT_NONE -d PREEMPT_VOLUNTARY -e PREEMPT -d PREEMPT_LAZY -d PREEMPT_LAZIEST -d PREEMPT_DYNAMIC -e PREEMPT_RT;;
+        dynamic)
+            scripts/config -d PREEMPT_NONE -d PREEMPT_VOLUNTARY -e PREEMPT -d PREEMPT_LAZY -d PREEMPT_LAZIEST -e PREEMPT_DYNAMIC -d PREEMPT_RT;;
         lazy)
-            scripts/config -e PREEMPT_BUILD -d PREEMPT_NONE -d PREEMPT_VOLUNTARY -d PREEMPT -e PREEMPT_LAZY -d PREEMPT_LAZIEST -e PREEMPT_COUNT -e PREEMPTION -e PREEMPT_DYNAMIC -d PREEMPT_RT
-            ;;
+            scripts/config -d PREEMPT_NONE -d PREEMPT_VOLUNTARY -d PREEMPT -e PREEMPT_LAZY -d PREEMPT_LAZIEST -d PREEMPT_DYNAMIC -d PREEMPT_RT;;
         full)
-            scripts/config -e PREEMPT_BUILD -d PREEMPT_NONE -d PREEMPT_VOLUNTARY -e PREEMPT -d PREEMPT_LAZY -d PREEMPT_LAZIEST -e PREEMPT_COUNT -e PREEMPTION -e PREEMPT_DYNAMIC -d PREEMPT_RT
-            ;;
+            scripts/config -d PREEMPT_NONE -d PREEMPT_VOLUNTARY -e PREEMPT -d PREEMPT_LAZY -d PREEMPT_LAZIEST -d PREEMPT_DYNAMIC -d PREEMPT_RT;;
+        voluntary)
+            scripts/config -d PREEMPT_NONE -e PREEMPT_VOLUNTARY -d PREEMPT -d PREEMPT_LAZY -d PREEMPT_LAZIEST -d PREEMPT_DYNAMIC -d PREEMPT_RT;;
         *)
             _die "The value '$_preempt' is invalid. Choose the correct one again."
     esac
@@ -411,7 +413,18 @@ prepare() {
     if [ "$_localmodcfg" = "y" ]; then
         if [ -e "$_localmodcfg_path" ]; then
             echo "Running Steven Rostedt's make localmodconfig now"
-            make "${BUILD_FLAGS[@]}" LSMOD="${_localmodcfg_path}" localmodconfig
+            ( cat "$_localmodcfg_path"
+              # Include ntsync and modules for Docker
+              for module in \
+                  bridge llc nf_conntrack nf_conntrack_netlink \
+                  nf_defrag_ipv4 nf_defrag_ipv6 nf_nat nf_tables \
+                  nft_chain_nat nft_compat ntsync overlay stp veth \
+                  xfrm_algo xfrm_user xt_addrtype xt_conntrack \
+                  xt_MASQUERADE xt_nat xt_tcpudp \
+              ;do echo "$module"; done
+            ) | sort -u > "/tmp/modprobed.db.$$"
+            make "${BUILD_FLAGS[@]}" LSMOD="/tmp/modprobed.db.$$" localmodconfig
+            rm -f "/tmp/modprobed.db.$$"
         else
             _die "No modprobed.db data found"
         fi

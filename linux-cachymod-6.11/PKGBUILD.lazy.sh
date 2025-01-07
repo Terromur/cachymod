@@ -68,7 +68,8 @@ export _HZ_ticks="1000"
 # hardware, lower consistency. Idle (without rcu_nocb_cpu) may reduce stutters.
 export _ticktype="full"
 
-# Select preemption { voluntary, full, lazy, rt }
+# Select preemption { dynamic, voluntary, full, lazy, rt }
+# Select "dynamic" for runtime selectable none, voluntary, (full), or lazy.
 # Select "voluntary" for desktop, matching the Clear kernel preemption.
 # Select "full" for low-latency desktop, matching the CachyOS kernel preemption.
 # Select "lazy" for low-latency desktop, matching the CachyOS RT kernel preemption.
