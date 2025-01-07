@@ -1,3 +1,5 @@
+https://polly.llvm.org/docs/UsingPollyWithClang.html
+
 From 836c16fbbd981fcf4f6b39faad2e7e7be13d5434 Mon Sep 17 00:00:00 2001
 From: Peter Jung <admin@ptr1337.dev>
 Date: Thu, 12 Dec 2024 17:28:45 +0100
@@ -69,12 +71,15 @@ diff -uarp a/init/Kconfig b/init/Kconfig
 diff -uarp a/Makefile b/Makefile
 --- a/Makefile
 +++ b/Makefile
-@@ -821,6 +821,23 @@ KBUILD_CFLAGS += $(call cc-option,-fmodu
+@@ -821,6 +821,26 @@ KBUILD_CFLAGS += $(call cc-option,-fmodu
  KBUILD_RUSTFLAGS += -Cdebug-assertions=$(if $(CONFIG_RUST_DEBUG_ASSERTIONS),y,n)
  KBUILD_RUSTFLAGS += -Coverflow-checks=$(if $(CONFIG_RUST_OVERFLOW_CHECKS),y,n)
  
 +ifdef CONFIG_POLLY_CLANG
 +KBUILD_CFLAGS	+= -fplugin=LLVMPolly.so \
++		   -mllvm -enable-gvn-hoist \
++		   -mllvm -inline-threshold=1000 \
++		   -mllvm -unroll-threshold=50 \
 +		   -mllvm -polly \
 +		   -mllvm -polly-ast-use-context \
 +		   -mllvm -polly-invariant-load-hoisting \
