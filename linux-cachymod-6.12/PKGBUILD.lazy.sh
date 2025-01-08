@@ -97,7 +97,7 @@ export _processor_opt=""
 # polly: Build the kernel with clang polyhedral loop optimizer, suffix "-polly"
 # clang: Build the kernel with clang (no LTO), suffix "-clang"
 # gcc:   Build the kernel with gcc, suffix "-gcc"
-export _buildtype="gcc"
+export _buildtype="polly"
 
 # Add extra sources here: opt-in/uncomment for the USB pollrate patch
 # Refer to https://github.com/GloriousEggroll/Linux-Pollrate-Patch
