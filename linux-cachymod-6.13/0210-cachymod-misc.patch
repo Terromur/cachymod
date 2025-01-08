@@ -85,6 +85,55 @@ index 6085ef50febf..44d736e49d06 100644
 -- 
 2.47.0
 
+sched_ext: switch class when preempted by higher priority scheduler
+https://lore.kernel.org/all/20250108023328.37675-1-jameshongleiwang@126.com/
+
+From: Honglei Wang <jameshongleiwang@126.com>
+To: tj@kernel.org, void@manifault.com, arighi@nvidia.com,
+	changwoo@igalia.com
+Cc: mingo@redhat.com, peterz@infradead.org, juri.lelli@redhat.com,
+	vincent.guittot@linaro.org, dietmar.eggemann@arm.com,
+	rostedt@goodmis.org, bsegall@google.com, mgorman@suse.de,
+	vschneid@redhat.com, linux-kernel@vger.kernel.org
+Subject: [PATCH v2] sched_ext: switch class when preempted by higher priority scheduler
+Date: Wed,  8 Jan 2025 10:33:28 +0800	[thread overview]
+Message-ID: <20250108023328.37675-1-jameshongleiwang@126.com> (raw)
+
+ops.cpu_release() function, if defined, must be invoked when preempted by
+a higher priority scheduler class task. This scenario was skipped in
+commit f422316d7466 ("sched_ext: Remove switch_class_scx()"). Let's fix
+it.
+
+Fixes: f422316d7466 ("sched_ext: Remove switch_class_scx()")
+Signed-off-by: Honglei Wang <jameshongleiwang@126.com>
+---
+ kernel/sched/ext.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/kernel/sched/ext.c b/kernel/sched/ext.c
+index 19d2699cf638..ef0e3f2c1e6f 100644
+--- a/kernel/sched/ext.c
++++ b/kernel/sched/ext.c
+@@ -3034,7 +3034,7 @@ static void put_prev_task_scx(struct rq *rq, struct task_struct *p,
+ 		 */
+ 		if (p->scx.slice && !scx_rq_bypassing(rq)) {
+ 			dispatch_enqueue(&rq->scx.local_dsq, p, SCX_ENQ_HEAD);
+-			return;
++			goto switch_class;
+ 		}
+ 
+ 		/*
+@@ -3051,6 +3051,7 @@ static void put_prev_task_scx(struct rq *rq, struct task_struct *p,
+ 		}
+ 	}
+ 
++switch_class:
+ 	if (next && next->sched_class != &ext_sched_class)
+ 		switch_class(rq, next);
+ }
+-- 
+2.45.2
+
 From: Andrea Righi <arighi@nvidia.com>
 To: Tejun Heo <tj@kernel.org>, David Vernet <void@manifault.com>,
 	Changwoo Min <changwoo@igalia.com>
