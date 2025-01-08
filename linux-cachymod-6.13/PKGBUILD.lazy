@@ -81,7 +81,7 @@ _processor_opt=${_processor_opt-}
 # polly: Build the kernel with clang polyhedral loop optimizer, suffix "-polly"
 # clang: Build the kernel with clang (no LTO), suffix "-clang"
 # gcc:   Build the kernel with gcc, suffix "-gcc"
-_buildtype=${_buildtype-gcc}
+_buildtype=${_buildtype-polly}
 
 _pkgsuffix=cachymod-613
 
