@@ -117,6 +117,9 @@ source=(
     "0001-preempt-lazy.patch"
     "0001-cachyos-base-all.patch"
     "0001-sched-fair-remove-cachy-mods.patch"
+    "intel_idle.patch"
+    "valve-gamescope-framerate-control-fixups.patch"
+    "0001-drm-amdgpu-always-allocate-cleared-VRAM-for-GEM-allo.patch"
 )
 if [ "$_prefer_eevdf" = "y" ]; then
     source+=("0001-linux6.12.y-optimal-base-slice.patch")
