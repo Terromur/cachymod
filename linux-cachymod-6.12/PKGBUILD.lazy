@@ -134,9 +134,13 @@ source+=(
 )
 
 # LLVM makedepends
-if [[ "$buildtype" =~ (lto|polly|clang) ]]; then
+if [[ "$buildtype" =~ (lto|polly) ]]; then
     makedepends+=( clang llvm lld polly )
     source+=("dkms-clang.patch" "polly.patch")
+    BUILD_FLAGS=( CC=clang LD=ld.lld LLVM=1 LLVM_IAS=1 )
+elif [[ "$buildtype" = "clang" ]]; then
+    makedepends+=( clang llvm lld )
+    source+=("dkms-clang.patch")
     BUILD_FLAGS=( CC=clang LD=ld.lld LLVM=1 LLVM_IAS=1 )
 else
     BUILD_FLAGS=( CC=gcc )
