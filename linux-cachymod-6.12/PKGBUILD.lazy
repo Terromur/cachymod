@@ -71,7 +71,7 @@ _use_auto_optimization=${_use_auto_optimization-y}
 #   sapphirerapids, alderlake, raptorlake, meteorlake, emeraldrapids }
 _processor_opt=${_processor_opt-}
 
-# Select build type { full, thin, polly, clang, gcc }
+# Select build type { full, thin, polly, gcc }
 # full:  Build the kernel with clang (full LTO), suffix "-lto"
 #        Uses 1 thread for linking, slow and uses more memory (>16GB),
 #        theoretically with the highest performance gains
@@ -79,7 +79,6 @@ _processor_opt=${_processor_opt-}
 #        Uses multiple threads, faster and lesser memory consumption,
 #        possibly lower runtime performance than full
 # polly: Build the kernel with clang polyhedral loop optimizer, suffix "-polly"
-# clang: Build the kernel with clang (no LTO), suffix "-clang"
 # gcc:   Build the kernel with gcc, suffix "-gcc"
 _buildtype=${_buildtype-polly}
 
@@ -137,10 +136,6 @@ source+=(
 if [[ "$buildtype" =~ (lto|polly) ]]; then
     makedepends+=( clang llvm lld polly )
     source+=("dkms-clang.patch" "polly.patch")
-    BUILD_FLAGS=( CC=clang LD=ld.lld LLVM=1 LLVM_IAS=1 )
-elif [[ "$buildtype" = "clang" ]]; then
-    makedepends+=( clang llvm lld )
-    source+=("dkms-clang.patch")
     BUILD_FLAGS=( CC=clang LD=ld.lld LLVM=1 LLVM_IAS=1 )
 else
     BUILD_FLAGS=( CC=gcc )
@@ -241,7 +236,7 @@ prepare() {
         polly)
             scripts/config -e POLLY_CLANG
             ;;
-        clang | gcc)
+        gcc)
             scripts/config -e LTO_NONE
             ;;
         *)
