@@ -88,10 +88,10 @@ export _use_auto_optimization="y"
 export _processor_opt=""
 
 # Select build type { full, thin, polly, gcc }
-# full:  Build the kernel with clang (full LTO), suffix "-lto"
+# full:  Build the kernel with clang (full-LTO + polly), suffix "-lto"
 #        Uses 1 thread for linking, slow and uses more memory (>16GB),
 #        theoretically with the highest performance gains
-# thin:  Build the kernel with clang (thin LTO), suffix "-lto"
+# thin:  Build the kernel with clang (thin-LTO + polly), suffix "-lto"
 #        Uses multiple threads, faster and lesser memory consumption,
 #        possibly lower runtime performance than full
 # polly: Build the kernel with clang polyhedral loop optimizer, suffix "-polly"
