@@ -85,29 +85,6 @@ index 6085ef50febf..44d736e49d06 100644
 -- 
 2.47.0
 
-Move PREEMPT_RT before PREEMPT in vermagic.
-https://lore.kernel.org/all/fedd0c6b-a870-4b8f-8f52-6e11df936678@suse.com/
-
-diff --git a/include/linux/vermagic.h b/include/linux/vermagic.h
---- a/include/linux/vermagic.h
-+++ b/include/linux/vermagic.h
-@@ -15,10 +15,10 @@
- #else
- #define MODULE_VERMAGIC_SMP ""
- #endif
--#ifdef CONFIG_PREEMPT_BUILD
--#define MODULE_VERMAGIC_PREEMPT "preempt "
--#elif defined(CONFIG_PREEMPT_RT)
-+#ifdef CONFIG_PREEMPT_RT
- #define MODULE_VERMAGIC_PREEMPT "preempt_rt "
-+#elif defined(CONFIG_PREEMPT_BUILD)
-+#define MODULE_VERMAGIC_PREEMPT "preempt "
- #else
- #define MODULE_VERMAGIC_PREEMPT ""
- #endif
--- 
-2.34.1
-
 From: Andrea Righi <arighi@nvidia.com>
 To: Tejun Heo <tj@kernel.org>, David Vernet <void@manifault.com>,
 	Changwoo Min <changwoo@igalia.com>
@@ -145,6 +122,128 @@ index 0ce116e0f67c..010ce7680bbc 100644
  	if (SCX_HAS_OP(dump_task)) {
 -- 
 2.47.1
+
+Move PREEMPT_RT before PREEMPT in vermagic.
+https://lore.kernel.org/all/fedd0c6b-a870-4b8f-8f52-6e11df936678@suse.com/
+
+diff --git a/include/linux/vermagic.h b/include/linux/vermagic.h
+--- a/include/linux/vermagic.h
++++ b/include/linux/vermagic.h
+@@ -15,10 +15,10 @@
+ #else
+ #define MODULE_VERMAGIC_SMP ""
+ #endif
+-#ifdef CONFIG_PREEMPT_BUILD
+-#define MODULE_VERMAGIC_PREEMPT "preempt "
+-#elif defined(CONFIG_PREEMPT_RT)
++#ifdef CONFIG_PREEMPT_RT
+ #define MODULE_VERMAGIC_PREEMPT "preempt_rt "
++#elif defined(CONFIG_PREEMPT_BUILD)
++#define MODULE_VERMAGIC_PREEMPT "preempt "
+ #else
+ #define MODULE_VERMAGIC_PREEMPT ""
+ #endif
+-- 
+2.34.1
+
+sched_idle: Optimize the generic idle loop by removing needless memory barrier
+https://lore.kernel.org/all/20241009093745.9504-1-quic_zhonhan@quicinc.com/
+
+From: Zhongqiu Han <quic_zhonhan@quicinc.com>
+To: <mingo@redhat.com>, <peterz@infradead.org>,
+	<juri.lelli@redhat.com>, <vincent.guittot@linaro.org>,
+	<dietmar.eggemann@arm.com>, <rostedt@goodmis.org>,
+	<bsegall@google.com>, <mgorman@suse.de>, <vschneid@redhat.com>
+Cc: <linux-kernel@vger.kernel.org>, <quic_zhonhan@quicinc.com>
+Subject: [PATCH RESEND] sched: idle: Optimize the generic idle loop by removing needless memory barrier
+Date: Wed, 9 Oct 2024 17:37:45 +0800	[thread overview]
+Message-ID: <20241009093745.9504-1-quic_zhonhan@quicinc.com> (raw)
+
+The memory barrier rmb() in generic idle loop do_idle() function is not
+needed, it doesn't order any load instruction, just remove it as needless
+rmb() can cause performance impact.
+
+The rmb() was introduced by the tglx/history.git commit f2f1b44c75c4
+("[PATCH] Remove RCU abuse in cpu_idle()") to order the loads between
+cpu_idle_map and pm_idle. It pairs with wmb() in function cpu_idle_wait().
+
+And then with the removal of cpu_idle_state in function cpu_idle() and
+wmb() in function cpu_idle_wait() in commit 783e391b7b5b ("x86: Simplify
+cpu_idle_wait"), rmb() no longer has a reason to exist.
+
+After that, commit d16699123434 ("idle: Implement generic idle function")
+implemented a generic idle function cpu_idle_loop() which resembles the
+functionality found in arch/. And it retained the rmb() in generic idle
+loop in file kernel/cpu/idle.c.
+
+And at last, commit cf37b6b48428 ("sched/idle: Move cpu/idle.c to
+sched/idle.c") moved cpu/idle.c to sched/idle.c. And commit c1de45ca831a
+("sched/idle: Add support for tasks that inject idle") renamed function
+cpu_idle_loop() to do_idle().
+
+Signed-off-by: Zhongqiu Han <quic_zhonhan@quicinc.com>
+History Tree: https://git.kernel.org/pub/scm/linux/kernel/git/tglx/history.git
+---
+ kernel/sched/idle.c | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/kernel/sched/idle.c b/kernel/sched/idle.c
+index d2f096bb274c..ab911d1335ba 100644
+--- a/kernel/sched/idle.c
++++ b/kernel/sched/idle.c
+@@ -271,7 +271,6 @@ static void do_idle(void)
+ 	tick_nohz_idle_enter();
+ 
+ 	while (!need_resched()) {
+-		rmb();
+ 
+ 		/*
+ 		 * Interrupts shouldn't be re-enabled from that point on until
+-- 
+2.25.1
+
+Switch to gnu17, a GCC bug-fix version of the C11 standard.
+
+What is C17 and what changes have been made to the language?
+https://stackoverflow.com/questions/47529854/
+
+Signed-off-by: Mario Roy <...>
+
+diff -uarp a/arch/x86/Makefile b/arch/x86/Makefile
+--- a/arch/x86/Makefile
++++ b/arch/x86/Makefile
+@@ -47,7 +47,7 @@ endif
+ 
+ # How to compile the 16-bit code.  Note we always compile for -march=i386;
+ # that way we can complain to the user if the CPU is insufficient.
+-REALMODE_CFLAGS	:= -std=gnu11 -m16 -g -Os -DDISABLE_BRANCH_PROFILING -D__DISABLE_EXPORTS \
++REALMODE_CFLAGS	:= -std=gnu17 -m16 -g -Os -DDISABLE_BRANCH_PROFILING -D__DISABLE_EXPORTS \
+ 		   -Wall -Wstrict-prototypes -march=i386 -mregparm=3 \
+ 		   -fno-strict-aliasing -fomit-frame-pointer -fno-pic \
+ 		   -mno-mmx -mno-sse $(call cc-option,-fcf-protection=none)
+diff -uarp a/Makefile b/Makefile
+--- a/Makefile
++++ b/Makefile
+@@ -462,7 +462,7 @@ HOSTRUSTC = rustc
+ HOSTPKG_CONFIG	= pkg-config
+ 
+ KBUILD_USERHOSTCFLAGS := -Wall -Wmissing-prototypes -Wstrict-prototypes \
+-			 -O2 -fomit-frame-pointer -std=gnu11
++			 -O2 -fomit-frame-pointer -std=gnu17
+ KBUILD_USERCFLAGS  := $(KBUILD_USERHOSTCFLAGS) $(USERCFLAGS)
+ KBUILD_USERLDFLAGS := $(USERLDFLAGS)
+ 
+@@ -575,7 +575,7 @@ LINUXINCLUDE    := \
+ KBUILD_AFLAGS   := -D__ASSEMBLY__ -fno-PIE
+ 
+ KBUILD_CFLAGS :=
+-KBUILD_CFLAGS += -std=gnu11
++KBUILD_CFLAGS += -std=gnu17
+ KBUILD_CFLAGS += -fshort-wchar
+ KBUILD_CFLAGS += -funsigned-char
+ KBUILD_CFLAGS += -fno-common
+-- 
+2.30.1
 
 Curated patches from XanMod Linux
 https://gitlab.com/xanmod/linux-patches

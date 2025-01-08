@@ -123,6 +123,49 @@ index 0ce116e0f67c..010ce7680bbc 100644
 -- 
 2.47.1
 
+Switch to gnu17, a GCC bug-fix version of the C11 standard.
+
+What is C17 and what changes have been made to the language?
+https://stackoverflow.com/questions/47529854/
+
+Signed-off-by: Mario Roy <...>
+
+diff -uarp a/arch/x86/Makefile b/arch/x86/Makefile
+--- a/arch/x86/Makefile
++++ b/arch/x86/Makefile
+@@ -47,7 +47,7 @@ endif
+ 
+ # How to compile the 16-bit code.  Note we always compile for -march=i386;
+ # that way we can complain to the user if the CPU is insufficient.
+-REALMODE_CFLAGS	:= -std=gnu11 -m16 -g -Os -DDISABLE_BRANCH_PROFILING -D__DISABLE_EXPORTS \
++REALMODE_CFLAGS	:= -std=gnu17 -m16 -g -Os -DDISABLE_BRANCH_PROFILING -D__DISABLE_EXPORTS \
+ 		   -Wall -Wstrict-prototypes -march=i386 -mregparm=3 \
+ 		   -fno-strict-aliasing -fomit-frame-pointer -fno-pic \
+ 		   -mno-mmx -mno-sse $(call cc-option,-fcf-protection=none)
+diff -uarp a/Makefile b/Makefile
+--- a/Makefile
++++ b/Makefile
+@@ -462,7 +462,7 @@ HOSTRUSTC = rustc
+ HOSTPKG_CONFIG	= pkg-config
+ 
+ KBUILD_USERHOSTCFLAGS := -Wall -Wmissing-prototypes -Wstrict-prototypes \
+-			 -O2 -fomit-frame-pointer -std=gnu11
++			 -O2 -fomit-frame-pointer -std=gnu17
+ KBUILD_USERCFLAGS  := $(KBUILD_USERHOSTCFLAGS) $(USERCFLAGS)
+ KBUILD_USERLDFLAGS := $(USERLDFLAGS)
+ 
+@@ -575,7 +575,7 @@ LINUXINCLUDE    := \
+ KBUILD_AFLAGS   := -D__ASSEMBLY__ -fno-PIE
+ 
+ KBUILD_CFLAGS :=
+-KBUILD_CFLAGS += -std=gnu11
++KBUILD_CFLAGS += -std=gnu17
+ KBUILD_CFLAGS += -fshort-wchar
+ KBUILD_CFLAGS += -funsigned-char
+ KBUILD_CFLAGS += -fno-common
+-- 
+2.30.1
+
 Curated patches from XanMod Linux
 https://gitlab.com/xanmod/linux-patches
 
