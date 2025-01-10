@@ -102,11 +102,15 @@ export _buildtype="polly"
 # Add extra sources here: opt-in/uncomment for the USB pollrate patch
 # Refer to https://github.com/GloriousEggroll/Linux-Pollrate-Patch
 # Do not add the pollrate patch unless useful to you.
-#export _extra_patch_or_url1="0300-pollrate.patch"
+#export _extra_patch_or_url1="1010-usb-pollrate.patch"
 #export _extra_patch_or_url2=""
 #export _extra_patch_or_url3=""
 #export _extra_patch_or_url4=""
 #export _extra_patch_or_url5=""
+#export _extra_patch_or_url6=""
+#export _extra_patch_or_url7=""
+#export _extra_patch_or_url8=""
+#export _extra_patch_or_url9=""
 
 # Build a debug package with non-stripped vmlinux
 export _build_debug="${_build_debug-}"

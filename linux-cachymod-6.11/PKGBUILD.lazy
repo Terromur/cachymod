@@ -163,6 +163,10 @@ fi
 [ -n "$_extra_patch_or_url3" ] && source+=("$_extra_patch_or_url3")
 [ -n "$_extra_patch_or_url4" ] && source+=("$_extra_patch_or_url4")
 [ -n "$_extra_patch_or_url5" ] && source+=("$_extra_patch_or_url5")
+[ -n "$_extra_patch_or_url6" ] && source+=("$_extra_patch_or_url6")
+[ -n "$_extra_patch_or_url7" ] && source+=("$_extra_patch_or_url7")
+[ -n "$_extra_patch_or_url8" ] && source+=("$_extra_patch_or_url8")
+[ -n "$_extra_patch_or_url9" ] && source+=("$_extra_patch_or_url9")
 
 pkgbase="linux-$_pkgsuffix"
 if [ "$_preempt" = "rt" ]; then
