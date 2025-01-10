@@ -82,7 +82,28 @@ _processor_opt=${_processor_opt-}
 # gcc:   Build the kernel with gcc, suffix "-gcc"
 _buildtype=${_buildtype-polly}
 
-_pkgsuffix=cachymod-612
+# Build a debug package with non-stripped vmlinux
+_build_debug=${_build_debug-}
+
+# Enable AUTOFDO_CLANG for the first compilation to create a kernel,
+# which can be used for profiling
+# See wiki: https://cachyos.org/blog/2411-kernel-autofdo/
+# 1. Compile a kernel with _build_debug="y" and _autofdo="y"
+# 2. Boot the kernel in QEMU or on your system, see Workload
+# 3. Profile the kernel and convert the profile,
+#    see Generating the Profile for AutoFDO
+# 4. Put the profile into the sourcedir
+# 5. Run kernel build again with the _autofdo_profile_name
+#    path to profile specified
+export _autofdo="${_autofdo-}"
+
+# Name for the AutoFDO profile
+export _autofdo_profile_name="${_autofdo_profile_name-}"
+
+
+# ATTENTION: Do not modify after this line
+
+[[ "$_build_debug" =~ (y|1) ]] && _disable_debug_info=""
 
 if [[ "$_buildtype" = "thin" || "$_buildtype" = "full" ]]; then
     buildtype="lto"
@@ -90,13 +111,14 @@ else
     buildtype="$_buildtype"
 fi
 
+_pkgsuffix=cachymod-612
 _major=6.12
-_minor=8
+_minor=9
 pkgver=${_major}.${_minor}
 _stable=${_major}.${_minor}
 _srcname=linux-${_stable}
-pkgdesc='Linux BORE + Lazy Preemption + Cachy Sauce Kernel by CachyOS with other patches and improvements'
-pkgrel=5
+pkgdesc='CachyMod Linux Kernel with other patches and improvements'
+pkgrel=2
 _kernver="$pkgver-$pkgrel"
 _kernuname="${pkgver}-${_pkgsuffix}"
 arch=('x86_64')
@@ -114,7 +136,6 @@ source=(
     "auto-cpu-optimization.sh"
     "mkinitcpio.template"
     "0001-rt.patch"
-    "0001-preempt-lazy.patch"
     "0001-cachyos-base-all.patch"
     "0001-sched-fair-remove-cachy-mods.patch"
     "intel_idle.patch"
@@ -122,7 +143,7 @@ source=(
     "0001-drm-amdgpu-always-allocate-cleared-VRAM-for-GEM-allo.patch"
     "0001-amdgpu-fix-suspend-resume-issues.patch"
 )
-if [ "$_prefer_eevdf" = "y" ]; then
+if [[ "$_prefer_eevdf" =~ (y|1) ]]; then
     source+=("0001-linux6.12.y-optimal-base-slice.patch")
     buildtag="eevdf"
 else
@@ -152,6 +173,15 @@ fi
 [ -n "$_extra_patch_or_url4" ] && source+=("$_extra_patch_or_url4")
 [ -n "$_extra_patch_or_url5" ] && source+=("$_extra_patch_or_url5")
 
+# Use generated AutoFDO Profile
+if [[ "$_autofdo" =~ (y|1) && -n "$_autofdo_profile_name" ]]; then
+    if [ -e "$_autofdo_profile_name" ]; then
+        source+=("$_autofdo_profile_name")
+    else
+        _die "Failed to find file ${_autofdo_profile_name}"
+    fi
+fi
+
 pkgbase="linux-$_pkgsuffix"
 if [ "$_preempt" = "rt" ]; then
     pkgbase="${pkgbase}-${buildtag}-${buildtype}-rt"
@@ -178,10 +208,6 @@ prepare() {
         src="${src##*/}"
         src="${src%.zst}"
         [[ $src = *.patch ]] || continue
-      # if [[ "$src" = *"0001-rt.patch" && "$_preempt" != "rt" ]]; then
-      #     # Skip unless building a kernel with real-time preemption.
-      #     continue
-      # fi
         echo "Applying patch $src..."
         patch -Np1 < "../$src"
     done
@@ -204,7 +230,7 @@ prepare() {
                 scripts/config -k -e "CONFIG_M${MARCH}"
             fi
         fi
-    elif [ "$_use_auto_optimization" = "y" ]; then
+    elif [[ "$_use_auto_optimization" =~ (y|1) ]]; then
         ### Use automatic CPU optimization
         "${srcdir}"/auto-cpu-optimization.sh
     fi
@@ -218,7 +244,7 @@ prepare() {
     scripts/config -e SCHED_BORE
 
     ### Enable sched_ext scheduler
-    if [[ "$_enable_sched_ext" = "y" && "$_preempt" != "rt" ]]; then
+    if [[ "$_enable_sched_ext" =~ (y|1) && "$_preempt" != "rt" ]]; then
         echo "Enabling the sched_ext (SCX) scheduler..."
         scripts/config -e SCHED_CLASS_EXT
     else
@@ -268,7 +294,7 @@ prepare() {
     echo "Setting tick rate to ${_HZ_ticks} Hz..."
 
     ### Disable NUMA
-    if [ "$_NUMAdisable" = "y" ]; then
+    if [[ "$_NUMAdisable" =~ (y|1) ]]; then
         echo "Disabling NUMA from kernel config..."
         scripts/config -d NUMA \
             -d AMD_NUMA \
@@ -307,15 +333,17 @@ prepare() {
 
     case "$_preempt" in
         rt)
-            scripts/config -d PREEMPT_NONE -d PREEMPT_VOLUNTARY -e PREEMPT -d PREEMPT_LAZY -d PREEMPT_DYNAMIC -e PREEMPT_RT;;
+            scripts/config -d PREEMPT_NONE -d PREEMPT_VOLUNTARY -e PREEMPT -d PREEMPT_LAZY -d PREEMPT_LAZIEST -d PREEMPT_DYNAMIC -e PREEMPT_RT;;
         dynamic)
-            scripts/config -d PREEMPT_NONE -d PREEMPT_VOLUNTARY -e PREEMPT -d PREEMPT_LAZY -e PREEMPT_DYNAMIC -d PREEMPT_RT;;
+            scripts/config -d PREEMPT_NONE -d PREEMPT_VOLUNTARY -e PREEMPT -d PREEMPT_LAZY -d PREEMPT_LAZIEST -e PREEMPT_DYNAMIC -d PREEMPT_RT;;
+        laziest)
+            scripts/config -d PREEMPT_NONE -d PREEMPT_VOLUNTARY -d PREEMPT -d PREEMPT_LAZY -e PREEMPT_LAZIEST -d PREEMPT_DYNAMIC -d PREEMPT_RT;;
         lazy)
-            scripts/config -d PREEMPT_NONE -d PREEMPT_VOLUNTARY -d PREEMPT -e PREEMPT_LAZY -d PREEMPT_DYNAMIC -d PREEMPT_RT;;
+            scripts/config -d PREEMPT_NONE -d PREEMPT_VOLUNTARY -d PREEMPT -e PREEMPT_LAZY -d PREEMPT_LAZIEST -d PREEMPT_DYNAMIC -d PREEMPT_RT;;
         full)
-            scripts/config -d PREEMPT_NONE -d PREEMPT_VOLUNTARY -e PREEMPT -d PREEMPT_LAZY -d PREEMPT_DYNAMIC -d PREEMPT_RT;;
+            scripts/config -d PREEMPT_NONE -d PREEMPT_VOLUNTARY -e PREEMPT -d PREEMPT_LAZY -d PREEMPT_LAZIEST -d PREEMPT_DYNAMIC -d PREEMPT_RT;;
         voluntary)
-            scripts/config -d PREEMPT_NONE -e PREEMPT_VOLUNTARY -d PREEMPT -d PREEMPT_LAZY -d PREEMPT_DYNAMIC -d PREEMPT_RT;;
+            scripts/config -d PREEMPT_NONE -e PREEMPT_VOLUNTARY -d PREEMPT -d PREEMPT_LAZY -d PREEMPT_LAZIEST -d PREEMPT_DYNAMIC -d PREEMPT_RT;;
         *)
             _die "The value '$_preempt' is invalid. Choose the correct one again."
     esac
@@ -349,6 +377,20 @@ prepare() {
 
     echo "Selecting '$_hugepage' TRANSPARENT_HUGEPAGE config..."
 
+    # Enable Clang AutoFDO
+    # Add additonal check if Thin or Full LTO is enabled otherwise die
+    if [[ "$_autofdo" =~ (y|1) ]]; then
+        scripts/config -e AUTOFDO_CLANG
+        if [ "$buildtype" -ne "lto" ]; then
+           _die 'AutoFDO requires _buildtype="thin/full" LTO to continue.'
+        fi
+    fi
+
+    if [[ "$_autofdo" =~ (y|1) && -n "$_autofdo_profile_name" ]]; then
+        echo "AutoFDO profile has been found..."
+        BUILD_FLAGS+=(CLANG_AUTOFDO_PROFILE="${srcdir}/${_autofdo_profile_name}")
+    fi
+
     ### Run the config.sh script for kernel tuning
     if [[ -s "${srcdir}"/config.sh ]]; then
         echo "Further kernel customization. Running config.sh script..."
@@ -356,7 +398,7 @@ prepare() {
     fi
 
     ### Optionally run the trim.sh script to trim the kernel
-    if [[ "$_runtrim_script" = "y" && -s "${srcdir}"/trim.sh ]]; then
+    if [[ "$_runtrim_script" =~ (y|1) && -s "${srcdir}"/trim.sh ]]; then
         echo "Further kernel trimming. Running trim.sh script..."
         bash "${srcdir}"/trim.sh
     fi
@@ -366,8 +408,9 @@ prepare() {
     ### This requires disabling the ananicy-cpp service or will segfault
     ### Hence, if you do not use these things, want to save time building,
     ### and unlikely to decode a stack trace later
-    if [[ "$_disable_debug_info" = "y" ]]; then
-      if [[ -z "$_enable_sched_ext" || "$_enable_sched_ext" = "n" ]]; then
+    ### This option is ignored if selecting _build_debug package
+    if [[ "$_disable_debug_info" =~ (y|1) ]]; then
+      if [[ -z "$_enable_sched_ext" || "$_enable_sched_ext" =~ (n|0) ]]; then
         echo "More kernel trimming. Disabling DEBUG_INFO knobs..."
         scripts/config -d GDB_SCRIPTS
         scripts/config -d DEBUG_INFO
@@ -387,7 +430,7 @@ prepare() {
 
     ### Optionally load needed modules for the make localmodconfig
     # See https://aur.archlinux.org/packages/modprobed-db
-    if [ "$_localmodcfg" = "y" ]; then
+    if [[ "$_localmodcfg" =~ (y|1) ]]; then
         if [ -e "$_localmodcfg_path" ]; then
             echo "Running Steven Rostedt's make localmodconfig now"
             ( cat "$_localmodcfg_path"
@@ -417,10 +460,10 @@ prepare() {
     echo "Prepared $pkgbase version $(<version)"
 
     ### Running make nconfig
-    [ "$_makenconfig" = "y" ] && make "${BUILD_FLAGS[@]}" nconfig
+    [[ "$_makenconfig" =~ (y|1) ]] && make "${BUILD_FLAGS[@]}" nconfig
 
     ### Running make gconfig
-    [ "$_makegconfig" = "y" ] && make "${BUILD_FLAGS[@]}" gconfig
+    [[ "$_makegconfig" =~ (y|1) ]] && make "${BUILD_FLAGS[@]}" gconfig
 
     ### Save configuration for later reuse
     echo "Save configuration for later reuse..."
@@ -437,7 +480,7 @@ build() {
 
     make "${BUILD_FLAGS[@]}" -j"$ncpu" all | \
        grep -Ev '^  (AS|AR|CC|LD|BT|CE|CO|GE|HO|IN|IP|MK|OB|PA|PE|PO|RE|ST|TA|TE|UN|UP|VD|X32)'
-    if [[ -z "$_disable_debug_info" || "$_disable_debug_info" = "n" ]]; then
+    if [[ -z "$_disable_debug_info" || "$_disable_debug_info" =~ (n|0) ]]; then
        make -C tools/bpf/bpftool vmlinux.h feature-clang-bpf-co-re=1 | \
           grep -Ev '^  (AS|AR|CC|LD|BT|CE|CO|GE|HO|IN|MK|OB|PA|PE|PO|RE|ST|TA|TE|UN|UP|VD|X32)'
     fi
@@ -453,7 +496,7 @@ build() {
 _package() {
     pkgdesc="The $pkgdesc kernel and modules"
     depends=('coreutils' 'kmod' 'initramfs')
-    [ "$_enable_sched_ext" = "y" ] && depends+=('scx-scheds')
+    [[ "$_enable_sched_ext" =~ (y|1) ]] && depends+=('scx-scheds')
     optdepends=('wireless-regdb: to set the correct wireless channels of your country'
                 'linux-firmware: firmware images needed for some devices'
                 'modprobed-db: Keeps track of EVERY kernel module that has ever been probed - useful for those of us who make localmodconfig'
@@ -497,7 +540,7 @@ _package-headers() {
     local builddir="$pkgdir/usr/lib/modules/$(<version)/build"
 
     echo "Installing build files..."
-    if [[ -z "$_disable_debug_info" || "$_disable_debug_info" = "n" ]]; then
+    if [[ -z "$_disable_debug_info" || "$_disable_debug_info" =~ (n|0) ]]; then
         install -Dt "$builddir" -m644 .config Makefile Module.symvers System.map \
             localversion.* version vmlinux tools/bpf/bpftool/vmlinux.h
     else
@@ -579,7 +622,17 @@ _package-headers() {
     ln -sr "$builddir" "$pkgdir/usr/src/$pkgbase"
 }
 
+_package-dbg(){
+    pkgdesc="Non-stripped vmlinux file for the $pkgdesc kernel"
+    depends=("${pkgbase}-headers")
+
+    cd "${_srcname}"
+    mkdir -p "$pkgdir/usr/src/debug/${pkgbase}"
+    install -Dt "$pkgdir/usr/src/debug/${pkgbase}" -m644 vmlinux
+}
+
 pkgname=("$pkgbase")
+[[ "$_build_debug" =~ (y|1) ]] && pkgname+=("$pkgbase-dbg")
 pkgname+=("$pkgbase-headers")
 for _p in "${pkgname[@]}"; do
     eval "package_$_p() {

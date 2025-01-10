@@ -122,7 +122,7 @@ else
     buildtype="$_buildtype"
 fi
 
-if [ "$_prefer_eevdf" = "y" ]; then
+if [[ "$_prefer_eevdf" =~ (y|1) ]]; then
     buildtag="eevdf"
 else
     buildtag="bore"

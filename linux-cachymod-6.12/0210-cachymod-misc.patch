@@ -85,93 +85,6 @@ index 6085ef50febf..44d736e49d06 100644
 -- 
 2.47.0
 
-sched_ext: switch class when preempted by higher priority scheduler
-https://lore.kernel.org/all/20250108023328.37675-1-jameshongleiwang@126.com/
-
-From: Honglei Wang <jameshongleiwang@126.com>
-To: tj@kernel.org, void@manifault.com, arighi@nvidia.com,
-	changwoo@igalia.com
-Cc: mingo@redhat.com, peterz@infradead.org, juri.lelli@redhat.com,
-	vincent.guittot@linaro.org, dietmar.eggemann@arm.com,
-	rostedt@goodmis.org, bsegall@google.com, mgorman@suse.de,
-	vschneid@redhat.com, linux-kernel@vger.kernel.org
-Subject: [PATCH v2] sched_ext: switch class when preempted by higher priority scheduler
-Date: Wed,  8 Jan 2025 10:33:28 +0800	[thread overview]
-Message-ID: <20250108023328.37675-1-jameshongleiwang@126.com> (raw)
-
-ops.cpu_release() function, if defined, must be invoked when preempted by
-a higher priority scheduler class task. This scenario was skipped in
-commit f422316d7466 ("sched_ext: Remove switch_class_scx()"). Let's fix
-it.
-
-Fixes: f422316d7466 ("sched_ext: Remove switch_class_scx()")
-Signed-off-by: Honglei Wang <jameshongleiwang@126.com>
----
- kernel/sched/ext.c | 3 ++-
- 1 file changed, 2 insertions(+), 1 deletion(-)
-
-diff --git a/kernel/sched/ext.c b/kernel/sched/ext.c
-index 19d2699cf638..ef0e3f2c1e6f 100644
---- a/kernel/sched/ext.c
-+++ b/kernel/sched/ext.c
-@@ -3034,7 +3034,7 @@ static void put_prev_task_scx(struct rq *rq, struct task_struct *p,
- 		 */
- 		if (p->scx.slice && !scx_rq_bypassing(rq)) {
- 			dispatch_enqueue(&rq->scx.local_dsq, p, SCX_ENQ_HEAD);
--			return;
-+			goto switch_class;
- 		}
- 
- 		/*
-@@ -3051,6 +3051,7 @@ static void put_prev_task_scx(struct rq *rq, struct task_struct *p,
- 		}
- 	}
- 
-+switch_class:
- 	if (next && next->sched_class != &ext_sched_class)
- 		switch_class(rq, next);
- }
--- 
-2.45.2
-
-From: Andrea Righi <arighi@nvidia.com>
-To: Tejun Heo <tj@kernel.org>, David Vernet <void@manifault.com>,
-	Changwoo Min <changwoo@igalia.com>
-Cc: linux-kernel@vger.kernel.org
-Subject: [PATCH] sched_ext: Include remaining task time slice in error state dump
-Date: Mon,  6 Jan 2025 08:20:34 +0100	[thread overview]
-Message-ID: <20250106072034.74749-1-arighi@nvidia.com> (raw)
-
-Report the remaining time slice when dumping task information during an
-error exit.
-
-This information can be useful for tracking incorrect or excessively
-long time slices in schedulers that implement dynamic time slice logic.
-
-Signed-off-by: Andrea Righi <arighi@nvidia.com>
----
- kernel/sched/ext.c | 4 ++--
- 1 file changed, 2 insertions(+), 2 deletions(-)
-
-diff --git a/kernel/sched/ext.c b/kernel/sched/ext.c
-index 0ce116e0f67c..010ce7680bbc 100644
---- a/kernel/sched/ext.c
-+++ b/kernel/sched/ext.c
-@@ -5218,9 +5218,9 @@ static void scx_dump_task(struct seq_buf *s, struct scx_dump_ctx *dctx,
- 		  scx_get_task_state(p), p->scx.flags & ~SCX_TASK_STATE_MASK,
- 		  p->scx.dsq_flags, ops_state & SCX_OPSS_STATE_MASK,
- 		  ops_state >> SCX_OPSS_QSEQ_SHIFT);
--	dump_line(s, "      sticky/holding_cpu=%d/%d dsq_id=%s dsq_vtime=%llu",
-+	dump_line(s, "      sticky/holding_cpu=%d/%d dsq_id=%s dsq_vtime=%llu slice=%llu",
- 		  p->scx.sticky_cpu, p->scx.holding_cpu, dsq_id_buf,
--		  p->scx.dsq_vtime);
-+		  p->scx.dsq_vtime, p->scx.slice);
- 	dump_line(s, "      cpus=%*pb", cpumask_pr_args(p->cpus_ptr));
- 
- 	if (SCX_HAS_OP(dump_task)) {
--- 
-2.47.1
-
 Move PREEMPT_RT before PREEMPT in vermagic.
 https://lore.kernel.org/all/fedd0c6b-a870-4b8f-8f52-6e11df936678@suse.com/
 
@@ -296,6 +209,93 @@ diff -uarp a/Makefile b/Makefile
 
 Curated patches from XanMod Linux
 https://gitlab.com/xanmod/linux-patches
+
+# 0003-kbuild-Remove-GCC-minimal-function-alignment.patch
+
+From 67e174927705e71b0d254ab6fab5af40193376a4 Mon Sep 17 00:00:00 2001
+From: Alexandre Frade <kernel@xanmod.org>
+Date: Sat, 31 Aug 2024 16:57:41 +0000
+Subject: [PATCH 03/18] kbuild: Remove GCC minimal function alignment
+
+Signed-off-by: Alexandre Frade <kernel@xanmod.org>
+---
+ Makefile                       |  7 -------
+ arch/Kconfig                   | 12 ------------
+ include/linux/compiler_types.h | 10 +++++-----
+ 3 files changed, 5 insertions(+), 24 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index 59a938a0c335..1f9ef37558df 100644
+--- a/Makefile
++++ b/Makefile
+@@ -975,15 +975,8 @@ export CC_FLAGS_FPU
+ export CC_FLAGS_NO_FPU
+ 
+ ifneq ($(CONFIG_FUNCTION_ALIGNMENT),0)
+-# Set the minimal function alignment. Use the newer GCC option
+-# -fmin-function-alignment if it is available, or fall back to -falign-funtions.
+-# See also CONFIG_CC_HAS_SANE_FUNCTION_ALIGNMENT.
+-ifdef CONFIG_CC_HAS_MIN_FUNCTION_ALIGNMENT
+-KBUILD_CFLAGS += -fmin-function-alignment=$(CONFIG_FUNCTION_ALIGNMENT)
+-else
+ KBUILD_CFLAGS += -falign-functions=$(CONFIG_FUNCTION_ALIGNMENT)
+ endif
+-endif
+ 
+ # arch Makefile may override CC so keep this after arch Makefile is included
+ NOSTDINC_FLAGS += -nostdinc
+diff --git a/arch/Kconfig b/arch/Kconfig
+index bd9f095d69fa..7c1f69a6dc37 100644
+--- a/arch/Kconfig
++++ b/arch/Kconfig
+@@ -1667,18 +1667,6 @@ config FUNCTION_ALIGNMENT
+ 	default 4 if FUNCTION_ALIGNMENT_4B
+ 	default 0
+ 
+-config CC_HAS_MIN_FUNCTION_ALIGNMENT
+-	# Detect availability of the GCC option -fmin-function-alignment which
+-	# guarantees minimal alignment for all functions, unlike
+-	# -falign-functions which the compiler ignores for cold functions.
+-	def_bool $(cc-option, -fmin-function-alignment=8)
+-
+-config CC_HAS_SANE_FUNCTION_ALIGNMENT
+-	# Set if the guaranteed alignment with -fmin-function-alignment is
+-	# available or extra care is required in the kernel. Clang provides
+-	# strict alignment always, even with -falign-functions.
+-	def_bool CC_HAS_MIN_FUNCTION_ALIGNMENT || CC_IS_CLANG
+-
+ config ARCH_NEED_CMPXCHG_1_EMU
+ 	bool
+ 
+diff --git a/include/linux/compiler_types.h b/include/linux/compiler_types.h
+index 1a957ea2f4fe..972bd5f84766 100644
+--- a/include/linux/compiler_types.h
++++ b/include/linux/compiler_types.h
+@@ -99,17 +99,17 @@ static inline void __chk_io_ptr(const volatile void __iomem *ptr) { }
+  *   gcc: https://gcc.gnu.org/onlinedocs/gcc/Label-Attributes.html#index-cold-label-attribute
+  *
+  * When -falign-functions=N is in use, we must avoid the cold attribute as
+- * GCC drops the alignment for cold functions. Worse, GCC can implicitly mark
+- * callees of cold functions as cold themselves, so it's not sufficient to add
+- * __function_aligned here as that will not ensure that callees are correctly
+- * aligned.
++ * contemporary versions of GCC drop the alignment for cold functions. Worse,
++ * GCC can implicitly mark callees of cold functions as cold themselves, so
++ * it's not sufficient to add __function_aligned here as that will not ensure
++ * that callees are correctly aligned.
+  *
+  * See:
+  *
+  *   https://lore.kernel.org/lkml/Y77%2FqVgvaJidFpYt@FVFF77S0Q05N
+  *   https://gcc.gnu.org/bugzilla/show_bug.cgi?id=88345#c9
+  */
+-#if defined(CONFIG_CC_HAS_SANE_FUNCTION_ALIGNMENT) || (CONFIG_FUNCTION_ALIGNMENT == 0)
++#if !defined(CONFIG_CC_IS_GCC) || (CONFIG_FUNCTION_ALIGNMENT == 0)
+ #define __cold				__attribute__((__cold__))
+ #else
+ #define __cold
+-- 
+2.45.2
 
 # 0006-XANMOD-block-mq-deadline-Increase-write-priority-to-.patch
 
