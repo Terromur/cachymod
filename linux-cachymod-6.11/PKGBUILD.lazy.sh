@@ -4,9 +4,9 @@
 # Exit script immediately on error.
 set -e
 
-############################################################
-# Build options. Unless selections given, answer "y" or "".
-############################################################
+#############################################################
+# Build options. Unless selections given, answer "y/1" or "".
+#############################################################
 
 # The default is patching the kernel with the complete BORE CPU scheduler.
 # If you prefer EEVDF, only the BORE optimal base slice logic is applied.
@@ -23,6 +23,7 @@ export _runtrim_script=""
 # i.e sudo systemctl disable --now ananicy-cpp.service
 # Hence, if you do not use these things, want to save time building,
 # and unlikely to decode a stack trace later.
+# This option is ignored if selecting _build_debug package below.
 export _disable_debug_info=""
 
 # Enable sched_ext (SCX) scheduler (overrides _disable_debug_info).
@@ -94,8 +95,8 @@ export _processor_opt=""
 # thin:  Build the kernel with clang (thin-LTO + polly), suffix "-lto"
 #        Uses multiple threads, faster and lesser memory consumption,
 #        possibly lower runtime performance than full
-# polly: Build the kernel with clang polyhedral loop optimizer, suffix "-polly"
-# gcc:   Build the kernel with gcc, suffix "-gcc"
+# polly: Build kernel with clang polyhedral loop optimizer, suffix "-polly"
+# gcc:   Build kernel with gcc, suffix "-gcc"
 export _buildtype="polly"
 
 # Add extra sources here: opt-in/uncomment for the USB pollrate patch
@@ -107,9 +108,12 @@ export _buildtype="polly"
 #export _extra_patch_or_url4=""
 #export _extra_patch_or_url5=""
 
-############################################################
+# Build a debug package with non-stripped vmlinux
+export _build_debug="${_build_debug-}"
+
+#############################################################
 # Build the kernel.
-############################################################
+#############################################################
 
 # Overwrite PKGBUILD if it exists
 cp PKGBUILD.lazy PKGBUILD

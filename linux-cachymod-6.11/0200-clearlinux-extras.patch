@@ -958,7 +958,7 @@ index ae1b42775ef9..441ac65f4f15 100644
 +	if (!time_after(jiffies, per_cpu(last_yield, cpu)))
 +		return;
 +
-+	per_cpu(last_yield, cpu) = jiffies;
++	per_cpu(last_yield, cpu) = jiffies + msecs_to_jiffies(2);
  
  	rq = this_rq_lock_irq(&rf);
  

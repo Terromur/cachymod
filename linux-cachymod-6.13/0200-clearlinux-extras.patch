@@ -783,7 +783,7 @@ gcc12/build workarounds
 -KBUILD_CFLAGS += -mno-sse -mno-mmx -mno-sse2 -mno-3dnow -mno-avx
 +KBUILD_CFLAGS += -mno-sse -mno-mmx -mno-sse2 -mno-3dnow -mno-avx -mno-avx2 -mno-avx512f
  KBUILD_RUSTFLAGS += --target=$(objtree)/scripts/target.json
- KBUILD_RUSTFLAGS += -Ctarget-feature=-sse,-sse2,-sse3,-ssse3,-sse4.1,-sse4.2,-avx,-avx2
+ KBUILD_RUSTFLAGS += -Ctarget-feature=-sse,-sse2,-sse3,-ssse3,-sse4.1,-sse4.2,-avx,-avx2,-avx512f
  
 -- 
 2.45.2
@@ -955,7 +955,7 @@ index ae1b42775ef9..441ac65f4f15 100644
 +	if (!time_after(jiffies, per_cpu(last_yield, cpu)))
 +		return;
 +
-+	per_cpu(last_yield, cpu) = jiffies;
++	per_cpu(last_yield, cpu) = jiffies + msecs_to_jiffies(2);
  
  	rq = this_rq_lock_irq(&rf);
  

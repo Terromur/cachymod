@@ -14154,12 +14154,12 @@ index b027a4030976..5cc750200f19 100644
  	if (ret)
  		return ret;
  	jump_label_lock();
--	preempt_disable();
+-	rcu_read_lock();
  
  	/* Ensure the address is in a text area, and find a module if exists. */
  	*probed_mod = NULL;
  	if (!core_kernel_text((unsigned long) p->addr)) {
-+		guard(preempt)();
++		guard(rcu)();
  		*probed_mod = __module_text_address((unsigned long) p->addr);
  		if (!(*probed_mod)) {
  			ret = -EINVAL;
@@ -14210,7 +14210,7 @@ index b027a4030976..5cc750200f19 100644
  	}
  
  out:
--	preempt_enable();
+-	rcu_read_unlock();
  	jump_label_unlock();
  
  	return ret;
