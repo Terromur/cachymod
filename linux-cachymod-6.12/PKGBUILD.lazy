@@ -85,6 +85,21 @@ _buildtype=${_buildtype-polly}
 # Build a debug package with non-stripped vmlinux
 _build_debug=${_build_debug-}
 
+# Enable AUTOFDO_CLANG for the first compilation to create a kernel,
+# which can be used for profiling
+# See wiki: https://cachyos.org/blog/2411-kernel-autofdo/
+# 1. Compile a kernel with _build_debug="y" and _autofdo="y"
+# 2. Boot the kernel in QEMU or on your system, see Workload
+# 3. Profile the kernel and convert the profile,
+#    see Generating the Profile for AutoFDO
+# 4. Put the profile into the sourcedir
+# 5. Run kernel build again with the _autofdo_profile_name
+#    path to profile specified
+export _autofdo="${_autofdo-}"
+
+# Name for the AutoFDO profile
+export _autofdo_profile_name="${_autofdo_profile_name-}"
+
 
 # ATTENTION: Do not modify after this line
 
@@ -103,7 +118,7 @@ pkgver=${_major}.${_minor}
 _stable=${_major}.${_minor}
 _srcname=linux-${_stable}
 pkgdesc='CachyMod Linux Kernel with other patches and improvements'
-pkgrel=1
+pkgrel=2
 _kernver="$pkgver-$pkgrel"
 _kernuname="${pkgver}-${_pkgsuffix}"
 arch=('x86_64')
@@ -153,6 +168,15 @@ fi
 [ -n "$_extra_patch_or_url3" ] && source+=("$_extra_patch_or_url3")
 [ -n "$_extra_patch_or_url4" ] && source+=("$_extra_patch_or_url4")
 [ -n "$_extra_patch_or_url5" ] && source+=("$_extra_patch_or_url5")
+
+# Use generated AutoFDO Profile
+if [[ "$_autofdo" =~ (y|1) && -n "$_autofdo_profile_name" ]]; then
+    if [ -e "$_autofdo_profile_name" ]; then
+        source+=("$_autofdo_profile_name")
+    else
+        _die "Failed to find file ${_autofdo_profile_name}"
+    fi
+fi
 
 pkgbase="linux-$_pkgsuffix"
 if [ "$_preempt" = "rt" ]; then
@@ -348,6 +372,20 @@ prepare() {
     esac
 
     echo "Selecting '$_hugepage' TRANSPARENT_HUGEPAGE config..."
+
+    # Enable Clang AutoFDO
+    # Add additonal check if Thin or Full LTO is enabled otherwise die
+    if [[ "$_autofdo" =~ (y|1) ]]; then
+        scripts/config -e AUTOFDO_CLANG
+        if [ "$buildtype" -ne "lto" ]; then
+           _die 'AutoFDO requires _buildtype="thin/full" LTO to continue.'
+        fi
+    fi
+
+    if [[ "$_autofdo" =~ (y|1) && -n "$_autofdo_profile_name" ]]; then
+        echo "AutoFDO profile has been found..."
+        BUILD_FLAGS+=(CLANG_AUTOFDO_PROFILE="${srcdir}/${_autofdo_profile_name}")
+    fi
 
     ### Run the config.sh script for kernel tuning
     if [[ -s "${srcdir}"/config.sh ]]; then

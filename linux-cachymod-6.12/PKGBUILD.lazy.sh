@@ -111,6 +111,21 @@ export _buildtype="polly"
 # Build a debug package with non-stripped vmlinux
 export _build_debug="${_build_debug-}"
 
+# Enable AUTOFDO_CLANG for the first compilation to create a kernel,
+# which can be used for profiling
+# See wiki: https://cachyos.org/blog/2411-kernel-autofdo/
+# 1. Compile a kernel with _build_debug="y" and _autofdo="y"
+# 2. Boot the kernel in QEMU or on your system, see Workload
+# 3. Profile the kernel and convert the profile,
+#    see Generating the Profile for AutoFDO
+# 4. Put the profile into the sourcedir
+# 5. Run kernel build again with the _autofdo_profile_name
+#    path to profile specified
+export _autofdo="${_autofdo-}"
+
+# Name for the AutoFDO profile
+export _autofdo_profile_name="${_autofdo_profile_name-}"
+
 #############################################################
 # Build the kernel.
 #############################################################
