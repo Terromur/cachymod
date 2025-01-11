@@ -8,6 +8,14 @@ expectations.  The latency should improve with the drm buddy
 clearing patches that Arun has been working on.
 
 Signed-off-by: Alex Deucher <alexander.deucher@amd.com>
+
+Massive performance regression in Dota 2 (maybe others) on Linux 6.10.2
+compared to Linux-LTS 6.6.42
+https://gitlab.freedesktop.org/drm/amd/-/issues/3528#note_2533271
+
+Verified by @Terromur
+
+A problem that is still relevant today.
 ---
  drivers/gpu/drm/amd/amdgpu/amdgpu_gem.c | 4 ++++
  1 file changed, 4 insertions(+)
