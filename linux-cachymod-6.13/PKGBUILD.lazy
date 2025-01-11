@@ -145,9 +145,6 @@ source=(
     "0001-rt.patch"
     "0001-cachyos-base-all.patch"
     "0001-sched-fair-remove-cachy-mods.patch"
-    "0001-drm-amdgpu-always-allocate-cleared-VRAM-for-GEM-allo.patch"
-    "0001-amdgpu-fix-suspend-resume-issues.patch"
-    "intel_idle.patch"
 )
 if [[ "$_prefer_eevdf" =~ (y|1) ]]; then
     source+=("0001-linux6.13.y-optimal-base-slice.patch")
