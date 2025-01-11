@@ -103,9 +103,9 @@ export _buildtype="polly"
 # Refer to https://github.com/GloriousEggroll/Linux-Pollrate-Patch
 # Do not add the pollrate patch unless useful to you.
 #export _extra_patch_or_url1="1010-usb-pollrate.patch"
-#export _extra_patch_or_url2=""
-#export _extra_patch_or_url3=""
-#export _extra_patch_or_url4=""
+#export _extra_patch_or_url2="1020-drm-amdgpu-always-allocate-cleared-VRAM-for-GEM-allo.patch"
+#export _extra_patch_or_url3="1030-amdgpu-fix-suspend-resume-issues.patch"
+#export _extra_patch_or_url4="1040-intel-idle.patch"
 #export _extra_patch_or_url5=""
 #export _extra_patch_or_url6=""
 #export _extra_patch_or_url7=""
