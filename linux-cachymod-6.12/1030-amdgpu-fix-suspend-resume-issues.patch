@@ -2,12 +2,20 @@ From e62461803e84c181d6d237e27a215b788d72fa41 Mon Sep 17 00:00:00 2001
 From: "chr[]" <chris@socke>
 Date: Sun, 23 Apr 2023 06:13:47 +0200
 Subject: [PATCH] amdgpu: fix suspend/resume issues
+https://gitlab.freedesktop.org/drm/amd/-/issues/2524
 
 resume and irq handler happily races in set_power_state()
 
 * amdgpu_legacy_dpm_compute_clocks() needs lock
 * protect irq work handler
 * fix dpm_enabled usage
+
+Verified by @Terromur
+
+Fixes a problem with SI, SIK series of video cards in power_state.
+Since I have exactly this series of video card (HD7850), I have to use this patch.
+Perhaps it will be irrelevant in the future. Since the promotion of SI fixes,
+the SIK is present https://gitlab.freedesktop.org/drm/amd/-/issues/1776
 ---
  drivers/gpu/drm/amd/pm/legacy-dpm/kv_dpm.c    | 19 ++++++++++++++----
  .../gpu/drm/amd/pm/legacy-dpm/legacy_dpm.c    |  2 ++
