@@ -80,7 +80,7 @@ diff -uarp a/Makefile b/Makefile
 +KBUILD_CFLAGS	+= -fplugin=LLVMPolly.so \
 +		   -mllvm -enable-gvn-hoist \
 +		   -mllvm -inline-threshold=1500 \
-+		   -mllvm -unroll-threshold=50 \
++		   -mllvm -unroll-threshold=150 \
 +		   -mllvm -polly \
 +		   -mllvm -polly-ast-use-context \
 +		   -mllvm -polly-invariant-load-hoisting \
