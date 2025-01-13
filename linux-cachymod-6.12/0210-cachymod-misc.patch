@@ -1,4 +1,26 @@
 
+Disable the DELAY_DEQUEUE EEVDF feature by default.
+
+Enable feature via /etc/tmpfiles.d/ configuration, if needed.
+  w /sys/kernel/debug/sched/features - - - - DELAY_DEQUEUE
+Or manually.
+  echo DELAY_DEQUEUE | sudo tee /sys/kernel/debug/sched/features
+
+Signed-off-by: Mario Roy <...>
+
+diff -uarp a/kernel/sched/features.h b/kernel/sched/features.h
+--- a/kernel/sched/features.h
++++ b/kernel/sched/features.h
+@@ -46,7 +46,7 @@ SCHED_FEAT(CACHE_HOT_BUDDY, true)
+  *
+  * DELAY_ZERO clips the lag on dequeue (or wakeup) to 0.
+  */
+-SCHED_FEAT(DELAY_DEQUEUE, true)
++SCHED_FEAT(DELAY_DEQUEUE, false)
+ SCHED_FEAT(DELAY_ZERO, true)
+ 
+ /*
+
 sched_ext: Always call put_prev_task() with scx_enabled
 https://lore.kernel.org/lkml/20241013173928.20738-1-andrea.righi@linux.dev/T/#u
 
