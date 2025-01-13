@@ -118,7 +118,7 @@ pkgver=${_major}.${_minor}
 _stable=${_major}.${_minor}
 _srcname=linux-${_stable}
 pkgdesc='CachyMod Linux Kernel with other patches and improvements'
-pkgrel=3
+pkgrel=4
 _kernver="$pkgver-$pkgrel"
 _kernuname="${pkgver}-${_pkgsuffix}"
 arch=('x86_64')
@@ -137,6 +137,7 @@ source=(
     "mkinitcpio.template"
     "0001-rt.patch"
     "0001-cachyos-base-all.patch"
+    "0001-sched-ext-high-performance-clock.patch"
     "0001-sched-fair-remove-cachy-mods.patch"
     "0001-sched-fair-fix-scheduling-lag.patch"
 )
