@@ -118,13 +118,13 @@ _minor=0
 #_stable=${_major}.${_minor}
 
 # RC
-_rcver=rc6
+_rcver=rc7
 pkgver=${_major}.${_rcver}
 _stable=${_major}-${_rcver}
 
 _srcname=linux-${_stable}
 pkgdesc='CachyMod Linux Kernel with other patches and improvements'
-pkgrel=3
+pkgrel=2
 _kernver="$pkgver-$pkgrel"
 _kernuname="${pkgver}-${_pkgsuffix}"
 arch=('x86_64')
@@ -144,7 +144,9 @@ source=(
     "mkinitcpio.template"
     "0001-rt.patch"
     "0001-cachyos-base-all.patch"
+    "0001-sched-ext-high-performance-clock.patch"
     "0001-sched-fair-remove-cachy-mods.patch"
+    "0001-sched-fair-fix-scheduling-lag.patch"
 )
 if [[ "$_prefer_eevdf" =~ (y|1) ]]; then
     source+=("0001-linux6.13.y-optimal-base-slice.patch")
