@@ -202,15 +202,6 @@ if [[ $(uname -m) = *"x86"* ]]; then
     ### Default to IOMMU passthrough domain type.
     scripts/config -d IOMMU_DEFAULT_DMA_LAZY -e IOMMU_DEFAULT_PASSTHROUGH
 
-    ### Unallow upgrading ACPI tables via initrd.
-    scripts/config -d ACPI_TABLE_UPGRADE
-
-    ### Disable the PCI slot detection driver.
-    scripts/config -d ACPI_PCI_SLOT
-
-    ### Disable extended Error Log support.
-    scripts/config -d ACPI_EXTLOG
-
     ### Disable support for memory balloon compaction.
     scripts/config -d BALLOON_COMPACTION
 
@@ -239,11 +230,11 @@ if [[ $(uname -m) = *"x86"* ]]; then
     ### 0200 to remove the depends on EXPERT check.
     scripts/config -e DEBUG_FORCE_FUNCTION_ALIGN_64B
 
-    # This breaks NVIDIA OpenCL. Commented out on 2024-12-18.
-    # ### Disable heap memory zeroing on allocation by default.
-    # ### Instead, enable register zeroing on function exit.
-    # scripts/config -d INIT_STACK_ALL_ZERO -d INIT_ON_ALLOC_DEFAULT_ON
-    # scripts/config -e INIT_STACK_NONE -e ZERO_CALL_USED_REGS
+    ### Disable heap memory zeroing on allocation by default.
+    ### Instead, enable register zeroing on function exit.
+    ### NVIDIA OpenCL needs NVreg_InitializeSystemMemoryAllocations=1 (default)
+    #scripts/config -d INIT_STACK_ALL_ZERO -d INIT_ON_ALLOC_DEFAULT_ON
+    #scripts/config -e INIT_STACK_NONE -e ZERO_CALL_USED_REGS
 
     ### Disable Integrity Policy Enforcement (IPE).
     scripts/config -d SECURITY_IPE
