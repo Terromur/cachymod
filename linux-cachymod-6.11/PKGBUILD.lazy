@@ -88,7 +88,7 @@ _build_debug=${_build_debug-}
 
 # ATTENTION: Do not modify after this line
 
-[[ "$_build_debug" =~ (y|1) ]] && _disable_debug_info=""
+[[ "$_build_debug" =~ ^(yes|y|1)$ ]] && _disable_debug_info=""
 
 if [[ "$_buildtype" = "thin" || "$_buildtype" = "full" ]]; then
     buildtype="lto"
@@ -125,7 +125,7 @@ source=(
     "0001-cachyos-base-all.patch"
     "0001-sched-fair-remove-cachy-mods.patch"
 )
-if [[ "$_prefer_eevdf" =~ (y|1) ]]; then
+if [[ "$_prefer_eevdf" =~ ^(yes|y|1)$ ]]; then
     source+=("0001-linux6.11.y-optimal-base-slice.patch")
     buildtag="eevdf"
 else
@@ -195,7 +195,7 @@ prepare() {
         src="${src%.zst}"
         [[ $src = *.patch ]] || continue
         if [[ "$src" = *"0001-sched-ext"* ]]; then
-            if [[ -z "$_enable_sched_ext" || "$_enable_sched_ext" =~ (n|0) ]]; then
+            if [[ -z "$_enable_sched_ext" || "$_enable_sched_ext" =~ ^(no|n|0)$ ]]; then
                 # Skip unless selected.
                 continue
             fi
@@ -235,7 +235,7 @@ prepare() {
                 scripts/config -k -e "CONFIG_M${MARCH}"
             fi
         fi
-    elif [[ "$_use_auto_optimization" =~ (y|1) ]]; then
+    elif [[ "$_use_auto_optimization" =~ ^(yes|y|1)$ ]]; then
         ### Use automatic CPU optimization
         "${srcdir}"/auto-cpu-optimization.sh
     fi
@@ -249,7 +249,7 @@ prepare() {
     scripts/config -e SCHED_BORE
 
     ### Enable sched_ext scheduler
-    if [[ "$_enable_sched_ext" =~ (y|1) && "$_preempt" != "rt" ]]; then
+    if [[ "$_enable_sched_ext" =~ ^(yes|y|1)$ && "$_preempt" != "rt" ]]; then
         echo "Enabling the sched_ext (SCX) scheduler..."
         scripts/config -e SCHED_CLASS_EXT
     else
@@ -299,7 +299,7 @@ prepare() {
     echo "Setting tick rate to ${_HZ_ticks} Hz..."
 
     ### Disable NUMA
-    if [[ "$_NUMAdisable" =~ (y|1) ]]; then
+    if [[ "$_NUMAdisable" =~ ^(yes|y|1)$ ]]; then
         echo "Disabling NUMA from kernel config..."
         scripts/config -d NUMA \
             -d AMD_NUMA \
@@ -389,7 +389,7 @@ prepare() {
     fi
 
     ### Optionally run the trim.sh script to trim the kernel
-    if [[ "$_runtrim_script" =~ (y|1) && -s "${srcdir}"/trim.sh ]]; then
+    if [[ "$_runtrim_script" =~ ^(yes|y|1)$ && -s "${srcdir}"/trim.sh ]]; then
         echo "Further kernel trimming. Running trim.sh script..."
         bash "${srcdir}"/trim.sh
     fi
@@ -400,8 +400,8 @@ prepare() {
     ### Hence, if you do not use these things, want to save time building,
     ### and unlikely to decode a stack trace later
     ### This option is ignored if selecting _build_debug package
-    if [[ "$_disable_debug_info" =~ (y|1) ]]; then
-      if [[ -z "$_enable_sched_ext" || "$_enable_sched_ext" =~ (n|0) ]]; then
+    if [[ "$_disable_debug_info" =~ ^(yes|y|1)$ ]]; then
+      if [[ -z "$_enable_sched_ext" || "$_enable_sched_ext" =~ ^(no|n|0)$ ]]; then
         echo "More kernel trimming. Disabling DEBUG_INFO knobs..."
         scripts/config -d GDB_SCRIPTS
         scripts/config -d DEBUG_INFO
@@ -421,7 +421,7 @@ prepare() {
 
     ### Optionally load needed modules for the make localmodconfig
     # See https://aur.archlinux.org/packages/modprobed-db
-    if [[ "$_localmodcfg" =~ (y|1) ]]; then
+    if [[ "$_localmodcfg" =~ ^(yes|y|1)$ ]]; then
         if [ -e "$_localmodcfg_path" ]; then
             echo "Running Steven Rostedt's make localmodconfig now"
             ( cat "$_localmodcfg_path"
@@ -451,10 +451,10 @@ prepare() {
     echo "Prepared $pkgbase version $(<version)"
 
     ### Running make nconfig
-    [[ "$_makenconfig" =~ (y|1) ]] && make "${BUILD_FLAGS[@]}" nconfig
+    [[ "$_makenconfig" =~ ^(yes|y|1)$ ]] && make "${BUILD_FLAGS[@]}" nconfig
 
     ### Running make gconfig
-    [[ "$_makegconfig" =~ (y|1) ]] && make "${BUILD_FLAGS[@]}" gconfig
+    [[ "$_makegconfig" =~ ^(yes|y|1)$ ]] && make "${BUILD_FLAGS[@]}" gconfig
 
     ### Save configuration for later reuse
     echo "Save configuration for later reuse..."
@@ -471,7 +471,7 @@ build() {
 
     make "${BUILD_FLAGS[@]}" -j"$ncpu" all | \
        grep -Ev '^  (AS|AR|CC|LD|BT|CE|CO|GE|HO|IN|IP|MK|OB|PA|PE|PO|RE|ST|TA|TE|UN|UP|VD|X32)'
-    if [[ -z "$_disable_debug_info" || "$_disable_debug_info" =~ (n|0) ]]; then
+    if [[ -z "$_disable_debug_info" || "$_disable_debug_info" =~ ^(no|n|0)$ ]]; then
        make -C tools/bpf/bpftool vmlinux.h feature-clang-bpf-co-re=1 | \
           grep -Ev '^  (AS|AR|CC|LD|BT|CE|CO|GE|HO|IN|MK|OB|PA|PE|PO|RE|ST|TA|TE|UN|UP|VD|X32)'
     fi
@@ -487,7 +487,7 @@ build() {
 _package() {
     pkgdesc="The $pkgdesc kernel and modules"
     depends=('coreutils' 'kmod' 'initramfs')
-    [[ "$_enable_sched_ext" =~ (y|1) ]] && depends+=('scx-scheds')
+    [[ "$_enable_sched_ext" =~ ^(yes|y|1)$ ]] && depends+=('scx-scheds')
     optdepends=('wireless-regdb: to set the correct wireless channels of your country'
                 'linux-firmware: firmware images needed for some devices'
                 'modprobed-db: Keeps track of EVERY kernel module that has ever been probed - useful for those of us who make localmodconfig'
@@ -531,7 +531,7 @@ _package-headers() {
     local builddir="$pkgdir/usr/lib/modules/$(<version)/build"
 
     echo "Installing build files..."
-    if [[ -z "$_disable_debug_info" || "$_disable_debug_info" =~ (n|0) ]]; then
+    if [[ -z "$_disable_debug_info" || "$_disable_debug_info" =~ ^(no|n|0)$ ]]; then
         install -Dt "$builddir" -m644 .config Makefile Module.symvers System.map \
             localversion.* version vmlinux tools/bpf/bpftool/vmlinux.h
     else
@@ -623,7 +623,7 @@ _package-dbg(){
 }
 
 pkgname=("$pkgbase")
-[[ "$_build_debug" =~ (y|1) ]] && pkgname+=("$pkgbase-dbg")
+[[ "$_build_debug" =~ ^(yes|y|1)$ ]] && pkgname+=("$pkgbase-dbg")
 pkgname+=("$pkgbase-headers")
 for _p in "${pkgname[@]}"; do
     eval "package_$_p() {

@@ -4,9 +4,9 @@
 # Exit script immediately on error.
 set -e
 
-#############################################################
-# Build options. Unless selections given, answer "y/1" or "".
-#############################################################
+###############################################################################
+# Build options. Unless selections given, answer "yes/y/1", "no/n/0" or "".
+###############################################################################
 
 # The default is patching the kernel with the complete BORE CPU scheduler.
 # If you prefer EEVDF, only the BORE optimal base slice logic is applied.
@@ -115,9 +115,9 @@ export _buildtype="polly"
 # Build a debug package with non-stripped vmlinux
 export _build_debug="${_build_debug-}"
 
-#############################################################
+###############################################################################
 # Build the kernel.
-#############################################################
+###############################################################################
 
 # Overwrite PKGBUILD if it exists
 cp PKGBUILD.lazy PKGBUILD
