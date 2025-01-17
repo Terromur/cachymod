@@ -159,9 +159,10 @@ source+=(
 if [[ "$buildtype" =~ (lto|polly) ]]; then
     makedepends+=( clang llvm lld polly )
     source+=("dkms-clang.patch" "polly.patch")
-    BUILD_FLAGS=( CC=clang LD=ld.lld LLVM=1 LLVM_IAS=1 )
+    BUILD_FLAGS=( CC=clang LD=ld.lld LLVM_IAS=1 )
     CLANG_BIN=$(which clang) ; CLANG_BIN="${CLANG_BIN%clang}"
-    [ "$CLANG_BIN" != "/usr/bin/" ] && LLVM="$CLANG_BIN"
+    [ "$CLANG_BIN"  = "/usr/bin/" ] && BUILD_FLAGS+=( LLVM=1 )
+    [ "$CLANG_BIN" != "/usr/bin/" ] && BUILD_FLAGS+=( LLVM="$CLANG_BIN" )
 else
     BUILD_FLAGS=( CC=gcc )
 fi
