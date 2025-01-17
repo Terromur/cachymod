@@ -90,7 +90,7 @@ diff -uarp a/Makefile b/Makefile
 +		   -mllvm -polly-run-inliner \
 +		   -mllvm -polly-tiling \
 +		   -mllvm -polly-2nd-level-tiling \
-+		   -mllvm -polly-vectorizer=none
++		   -mllvm -polly-vectorizer=stripmine
 +# Polly may optimise loops with dead paths beyound what the linker
 +# can understand. This may negate the effect of the linker's DCE
 +# so we tell Polly to perfom proven DCE on the loops it optimises
