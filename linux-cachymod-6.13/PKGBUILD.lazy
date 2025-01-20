@@ -114,17 +114,18 @@ fi
 _pkgsuffix=cachymod-613
 _major=6.13
 _minor=0
-#pkgver=${_major}.${_minor}
+pkgver=${_major}.${_minor}
 #_stable=${_major}.${_minor}
+_stable=${_major}
 
 # RC
-_rcver=rc7
-pkgver=${_major}.${_rcver}
-_stable=${_major}-${_rcver}
+#_rcver=rc7
+#pkgver=${_major}.${_rcver}
+#_stable=${_major}-${_rcver}
 
 _srcname=linux-${_stable}
 pkgdesc='CachyMod Linux Kernel with other patches and improvements'
-pkgrel=2
+pkgrel=1
 _kernver="$pkgver-$pkgrel"
 _kernuname="${pkgver}-${_pkgsuffix}"
 arch=('x86_64')
@@ -135,8 +136,8 @@ options=('!strip' '!debug' '!lto')
 makedepends=(bc cpio gettext libelf pahole perl python tar xz zstd)
 
 source=(
-  # "https://cdn.kernel.org/pub/linux/kernel/v${pkgver%%.*}.x/${_srcname}.tar.xz"
-    "https://github.com/torvalds/linux/archive/refs/tags/v${_major}-${_rcver}.tar.gz"
+    "https://cdn.kernel.org/pub/linux/kernel/v${pkgver%%.*}.x/${_srcname}.tar.xz"
+  # "https://github.com/torvalds/linux/archive/refs/tags/v${_major}-${_rcver}.tar.gz"
     "config"
     "config.sh"
     "trim.sh"
@@ -146,7 +147,6 @@ source=(
     "0001-cachyos-base-all.patch"
     "0001-sched-ext-high-performance-clock.patch"
     "0001-sched-fair-remove-cachy-mods.patch"
-    "0001-sched-fair-fix-scheduling-lag.patch"
 )
 if [[ "$_prefer_eevdf" =~ ^(yes|y|1)$ ]]; then
     source+=("0001-linux6.13.y-optimal-base-slice.patch")
