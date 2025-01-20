@@ -1373,28 +1373,6 @@ index 93a822d3c468c..7cb19e6014266 100644
  #endif
  	entry = static_key_entries(key);
  	/* if there are no users, entry can be NULL */
-diff --git a/kernel/kprobes.c b/kernel/kprobes.c
-index b027a4030976a..22e47a27df4aa 100644
---- a/kernel/kprobes.c
-+++ b/kernel/kprobes.c
-@@ -1566,7 +1566,7 @@ static int check_kprobe_address_safe(struct kprobe *p,
- 	if (ret)
- 		return ret;
- 	jump_label_lock();
--	preempt_disable();
-+	rcu_read_lock();
- 
- 	/* Ensure the address is in a text area, and find a module if exists. */
- 	*probed_mod = NULL;
-@@ -1612,7 +1612,7 @@ static int check_kprobe_address_safe(struct kprobe *p,
- 	}
- 
- out:
--	preempt_enable();
-+	rcu_read_unlock();
- 	jump_label_unlock();
- 
- 	return ret;
 diff --git a/kernel/ksysfs.c b/kernel/ksysfs.c
 index 1bab21b4718ff..8d3bee77cacc6 100644
 --- a/kernel/ksysfs.c
@@ -2102,13 +2080,14 @@ diff --git a/kernel/trace/trace.c b/kernel/trace/trace.c
 index f8aebcb01e62c..1e82125d0c8d4 100644
 --- a/kernel/trace/trace.c
 +++ b/kernel/trace/trace.c
-@@ -4119,11 +4119,7 @@ print_trace_header(struct seq_file *m, struct trace_iterator *iter)
+@@ -4119,12 +4119,7 @@ print_trace_header(struct seq_file *m, struct trace_iterator *iter)
  		   entries,
  		   total,
  		   buf->cpu,
 -		   preempt_model_none()      ? "server" :
 -		   preempt_model_voluntary() ? "desktop" :
 -		   preempt_model_full()      ? "preempt" :
+-		   preempt_model_lazy()	     ? "lazy"    :
 -		   preempt_model_rt()        ? "preempt_rt" :
 -		   "unknown",
 +		   preempt_model_str(),
