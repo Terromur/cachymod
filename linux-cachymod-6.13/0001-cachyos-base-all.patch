@@ -30125,6 +30125,55 @@ index 9eed3683ad76..7ddbf75f4c26 100755
 -- 
 2.48.0.rc1
 
+From 43aaeb3514ecd4f57028f5e57d90cc49991b7310 Mon Sep 17 00:00:00 2001
+From: Aditya Garg <gargaditya08@live.com>
+Date: Mon, 20 Jan 2025 16:50:47 +0000
+Subject: [PATCH] wifi: brcmfmac: use random seed flag for BCM4355 and BCM4364
+ firmware
+
+Before 6.13, random seed to the firmware was given based on the logic
+whether the device had valid OTP or not, and such devices were found
+mainly on the T2 and Apple Silicon Macs. In 6.13, the logic was changed,
+and the device table was used for this purpose, so as to cover the special
+case of BCM43752 chip.
+
+During the transition, the device table for BCM4364 and BCM4355 Wi-Fi chips
+which had valid OTP was not modified, thus breaking Wi-Fi on these devices.
+This patch adds does the necessary changes, similar to the ones done for
+other chips.
+
+Fixes: ea11a89c3ac6 ("wifi: brcmfmac: add flag for random seed during firmware download")
+Cc: stable@vger.kernel.org
+Signed-off-by: Aditya Garg <gargaditya08@live.com>
+---
+ drivers/net/wireless/broadcom/brcm80211/brcmfmac/pcie.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/pcie.c b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/pcie.c
+index e4395b1f8c11..d2caa80e9412 100644
+--- a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/pcie.c
++++ b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/pcie.c
+@@ -2712,7 +2712,7 @@ static const struct pci_device_id brcmf_pcie_devid_table[] = {
+ 	BRCMF_PCIE_DEVICE(BRCM_PCIE_4350_DEVICE_ID, WCC),
+ 	BRCMF_PCIE_DEVICE_SUB(0x4355, BRCM_PCIE_VENDOR_ID_BROADCOM, 0x4355, WCC),
+ 	BRCMF_PCIE_DEVICE(BRCM_PCIE_4354_RAW_DEVICE_ID, WCC),
+-	BRCMF_PCIE_DEVICE(BRCM_PCIE_4355_DEVICE_ID, WCC),
++	BRCMF_PCIE_DEVICE(BRCM_PCIE_4355_DEVICE_ID, WCC_SEED),
+ 	BRCMF_PCIE_DEVICE(BRCM_PCIE_4356_DEVICE_ID, WCC),
+ 	BRCMF_PCIE_DEVICE(BRCM_PCIE_43567_DEVICE_ID, WCC),
+ 	BRCMF_PCIE_DEVICE(BRCM_PCIE_43570_DEVICE_ID, WCC),
+@@ -2723,7 +2723,7 @@ static const struct pci_device_id brcmf_pcie_devid_table[] = {
+ 	BRCMF_PCIE_DEVICE(BRCM_PCIE_43602_2G_DEVICE_ID, WCC),
+ 	BRCMF_PCIE_DEVICE(BRCM_PCIE_43602_5G_DEVICE_ID, WCC),
+ 	BRCMF_PCIE_DEVICE(BRCM_PCIE_43602_RAW_DEVICE_ID, WCC),
+-	BRCMF_PCIE_DEVICE(BRCM_PCIE_4364_DEVICE_ID, WCC),
++	BRCMF_PCIE_DEVICE(BRCM_PCIE_4364_DEVICE_ID, WCC_SEED),
+ 	BRCMF_PCIE_DEVICE(BRCM_PCIE_4365_DEVICE_ID, BCA),
+ 	BRCMF_PCIE_DEVICE(BRCM_PCIE_4365_2G_DEVICE_ID, BCA),
+ 	BRCMF_PCIE_DEVICE(BRCM_PCIE_4365_5G_DEVICE_ID, BCA),
+-- 
+2.48.0.rc1
+
 From 6f96c228cd968c7f47eb90d9e7ad6d679bf5a7f0 Mon Sep 17 00:00:00 2001
 From: Peter Jung <admin@ptr1337.dev>
 Date: Mon, 20 Jan 2025 13:23:20 +0100
@@ -48776,4 +48825,23 @@ index 469fc3059be0..0ae819f0c927 100644
  
 -- 
 2.48.0.rc1
+
+Revert "Fix GA605W backlight"
+https://github.com/CachyOS/linux/commit/cc329b7c7e0e045a17bc046697c1493542cd1c5d
+
+diff --git a/drivers/gpu/drm/amd/display/dc/link/protocols/link_edp_panel_control.c b/drivers/gpu/drm/amd/display/dc/link/protocols/link_edp_panel_control.c
+--- a/drivers/gpu/drm/amd/display/dc/link/protocols/link_edp_panel_control.c
++++ b/drivers/gpu/drm/amd/display/dc/link/protocols/link_edp_panel_control.c
+@@ -187,8 +187,7 @@ bool edp_set_backlight_level_nits(struct dc_link *link,
+ 			(uint8_t *)(target_luminance),
+ 			sizeof(struct target_luminance_value)) != DC_OK)
+ 			return false;
+-//	} else if (link->backlight_control_type == BACKLIGHT_CONTROL_AMD_AUX) {
+-		} else {
++	} else if (link->backlight_control_type == BACKLIGHT_CONTROL_AMD_AUX) {
+ 		struct dpcd_source_backlight_set dpcd_backlight_set;
+ 		*(uint32_t *)&dpcd_backlight_set.backlight_level_millinits = backlight_millinits;
+ 		*(uint16_t *)&dpcd_backlight_set.backlight_transition_time_ms = (uint16_t)transition_time_in_ms;
+-- 
+2.48.0
 

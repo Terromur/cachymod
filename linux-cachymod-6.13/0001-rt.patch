@@ -1,8 +1,8 @@
 patch-6.13-rc6-rt3
 https://cdn.kernel.org/pub/linux/kernel/projects/rt/6.13/
 
-This one differs from rc6-rt3, removed kernel/kprobes.c changes
-Instead, kernel/kprobes.c update resides in 0001-cachyos-base-all.patch
+This patch differs from rc6-rt3. Removed kernel/kprobes.c update
+applied by 0001-cachyos-base-all.patch.
 
 
 diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
