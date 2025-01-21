@@ -1,7 +1,7 @@
-From eccdeda2cb2637f964b4b50e6f30c37b16bd098a Mon Sep 17 00:00:00 2001
+From b4bd10b39f1c903a52f2103a26dc030d7dc7ea82 Mon Sep 17 00:00:00 2001
 From: Masahito S <firelzrd@gmail.com>
-Date: Tue, 31 Dec 2024 21:49:13 +0900
-Subject: [PATCH] linux6.12.y-bore5.9.5
+Date: Mon, 20 Jan 2025 07:24:54 +0900
+Subject: [PATCH] linux6.12.y-bore5.9.6
 
 ---
  include/linux/sched.h      |  18 ++
@@ -10,12 +10,12 @@ Subject: [PATCH] linux6.12.y-bore5.9.5
  kernel/Kconfig.hz          |  17 ++
  kernel/fork.c              |   6 +
  kernel/sched/Makefile      |   1 +
- kernel/sched/bore.c        | 446 +++++++++++++++++++++++++++++++++++++
+ kernel/sched/bore.c        | 443 +++++++++++++++++++++++++++++++++++++
  kernel/sched/core.c        |   6 +
  kernel/sched/debug.c       |  61 ++++-
  kernel/sched/fair.c        |  76 ++++++-
  kernel/sched/sched.h       |   9 +
- 11 files changed, 692 insertions(+), 5 deletions(-)
+ 11 files changed, 689 insertions(+), 5 deletions(-)
  create mode 100644 include/linux/sched/bore.h
  create mode 100644 kernel/sched/bore.c
 
@@ -57,7 +57,7 @@ index bb343136dd..00e9f59d4c 100644
  
 diff --git a/include/linux/sched/bore.h b/include/linux/sched/bore.h
 new file mode 100644
-index 0000000000..a36947e12c
+index 0000000000..a8faabc288
 --- /dev/null
 +++ b/include/linux/sched/bore.h
 @@ -0,0 +1,40 @@
@@ -67,7 +67,7 @@ index 0000000000..a36947e12c
 +
 +#ifndef _LINUX_SCHED_BORE_H
 +#define _LINUX_SCHED_BORE_H
-+#define SCHED_BORE_VERSION "5.9.5"
++#define SCHED_BORE_VERSION "5.9.6"
 +
 +#ifdef CONFIG_SCHED_BORE
 +extern u8   __read_mostly sched_bore;
@@ -191,10 +191,10 @@ index 976092b7bd..293aad6754 100644
 +obj-y += bore.o
 diff --git a/kernel/sched/bore.c b/kernel/sched/bore.c
 new file mode 100644
-index 0000000000..d55cd32b34
+index 0000000000..23aeb56494
 --- /dev/null
 +++ b/kernel/sched/bore.c
-@@ -0,0 +1,446 @@
+@@ -0,0 +1,443 @@
 +/*
 + *  Burst-Oriented Response Enhancer (BORE) CPU Scheduler
 + *  Copyright (C) 2021-2024 Masahito Suzuki <firelzrd@gmail.com>
@@ -394,10 +394,9 @@ index 0000000000..d55cd32b34
 +		parent = parent->real_parent;
 +
 +	bc = &parent->se.child_burst;
-+	spin_lock(&bc->lock);
++	guard(spinlock)(&bc->lock);
 +	if (burst_cache_expired(bc, now))
 +		update_child_burst_direct(parent, now);
-+	spin_unlock(&bc->lock);
 +
 +	return bc->score;
 +}
@@ -460,11 +459,10 @@ index 0000000000..d55cd32b34
 +	}
 +
 +	bc = &anc->se.child_burst;
-+	spin_lock(&bc->lock);
++	guard(spinlock)(&bc->lock);
 +	if (burst_cache_expired(bc, now))
 +		update_child_burst_topological(
 +			anc, now, sched_burst_fork_atavistic - 1, &cnt, &sum);
-+	spin_unlock(&bc->lock);
 +
 +	return bc->score;
 +}
@@ -485,10 +483,9 @@ index 0000000000..d55cd32b34
 +static inline u8 inherit_burst_tg(struct task_struct *p, u64 now) {
 +	struct task_struct *parent = rcu_dereference(p->group_leader);
 +	struct sched_burst_cache *bc = &parent->se.group_burst;
-+	spin_lock(&bc->lock);
++	guard(spinlock)(&bc->lock);
 +	if (burst_cache_expired(bc, now))
 +		update_tg_burst(parent, now);
-+	spin_unlock(&bc->lock);
 +
 +	return bc->score;
 +}
