@@ -1,15 +1,3 @@
-
-suspend / resume gpu hang [patch]
-https://gitlab.freedesktop.org/drm/amd/-/issues/2524
-
-Verified by @Terromur
-
-Fixes a problem with SI, SIK series of video cards in power_state.
-Since I have exactly this series of video card (HD7850), I have to use this patch.
-Perhaps it will be irrelevant in the future. Since the promotion of SI fixes,
-the SIK is present https://gitlab.freedesktop.org/drm/amd/-/issues/1776
-
-
 From e62461803e84c181d6d237e27a215b788d72fa41 Mon Sep 17 00:00:00 2001
 From: "chr[]" <chris@socke>
 Date: Sun, 23 Apr 2023 06:13:47 +0200
