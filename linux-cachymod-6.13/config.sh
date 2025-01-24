@@ -322,10 +322,8 @@ if [[ $(uname -m) = *"x86"* ]]; then
     scripts/config --set-val NR_CPUS 512
     scripts/config --set-val NODES_SHIFT 10
 
-    ### Default to the 2:1 compression allocator (zbud) as the default allocator.
-    scripts/config -d ZSWAP_DEFAULT_ON -d ZSWAP_SHRINKER_DEFAULT_ON
-    scripts/config -d ZSWAP_ZPOOL_DEFAULT_ZSMALLOC -d ZSMALLOC_STAT
-    scripts/config -e ZSWAP_ZPOOL_DEFAULT_ZBUD -e ZBUD
-    scripts/config --set-str ZSWAP_ZPOOL_DEFAULT "zbud"
+    ### Disabling unnecessary values
+    scripts/config -d ZSWAP_SHRINKER_DEFAULT_ON
+    scripts/config -d ZBUD
 fi
 
