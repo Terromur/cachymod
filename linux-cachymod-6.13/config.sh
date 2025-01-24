@@ -268,7 +268,8 @@ if [[ $(uname -m) = *"x86"* ]]; then
     scripts/config -d X86_5LEVEL
 
     ### Disable strong stack protector.
-    scripts/config -d STACKPROTECTOR_STRONG -e STACKPROTECTOR
+    ### You can add -d STACKPROTECTOR to the line to full disable stack protector.
+    scripts/config -d STACKPROTECTOR_STRONG
 
     ### Default to none for vsyscall table for legacy applications.
     scripts/config -d LEGACY_VSYSCALL_XONLY -e LEGACY_VSYSCALL_NONE
