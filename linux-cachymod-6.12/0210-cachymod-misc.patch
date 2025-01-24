@@ -20,6 +20,214 @@ diff -uarp a/kernel/sched/features.h b/kernel/sched/features.h
  SCHED_FEAT(DELAY_ZERO, true)
  
  /*
+-- 
+2.47.0
+
+sched/fair: Fix inaccurate h_nr_runnable accounting with delayed dequeue
+https://lore.kernel.org/all/173746207146.31546.3446635183950754481.tip-bot2@tip-bot2/
+
+From: "tip-bot2 for K Prateek Nayak" <tip-bot2@linutronix.de>
+To: linux-tip-commits@vger.kernel.org
+Cc: K Prateek Nayak <kprateek.nayak@amd.com>,
+	"Peter Zijlstra (Intel)" <peterz@infradead.org>,
+	"Gautham R. Shenoy" <gautham.shenoy@amd.com>,
+	Swapnil Sapkal <swapnil.sapkal@amd.com>,
+	x86@kernel.org, linux-kernel@vger.kernel.org
+Subject: [tip: sched/urgent] sched/fair: Fix inaccurate h_nr_runnable accounting with delayed dequeue
+Date: Tue, 21 Jan 2025 12:21:11 -0000	[thread overview]
+Message-ID: <173746207146.31546.3446635183950754481.tip-bot2@tip-bot2> (raw)
+In-Reply-To: <20250117105852.23908-1-kprateek.nayak@amd.com>
+
+The following commit has been merged into the sched/urgent branch of tip:
+
+Commit-ID:     3429dd57f0deb1a602c2624a1dd7c4c11b6c4734
+Gitweb:        https://git.kernel.org/tip/3429dd57f0deb1a602c2624a1dd7c4c11b6c4734
+Author:        K Prateek Nayak <kprateek.nayak@amd.com>
+AuthorDate:    Fri, 17 Jan 2025 10:58:52 
+Committer:     Peter Zijlstra <peterz@infradead.org>
+CommitterDate: Tue, 21 Jan 2025 13:13:36 +01:00
+
+sched/fair: Fix inaccurate h_nr_runnable accounting with delayed dequeue
+
+set_delayed() adjusts cfs_rq->h_nr_runnable for the hierarchy when an
+entity is delayed irrespective of whether the entity corresponds to a
+task or a cfs_rq.
+
+Consider the following scenario:
+
+	root
+       /    \
+      A	     B (*) delayed since B is no longer eligible on root
+      |	     |
+    Task0  Task1 <--- dequeue_task_fair() - task blocks
+
+When Task1 blocks (dequeue_entity() for task's se returns true),
+dequeue_entities() will continue adjusting cfs_rq->h_nr_* for the
+hierarchy of Task1. However, when the sched_entity corresponding to
+cfs_rq B is delayed, set_delayed() will adjust the h_nr_runnable for the
+hierarchy too leading to both dequeue_entity() and set_delayed()
+decrementing h_nr_runnable for the dequeue of the same task.
+
+A SCHED_WARN_ON() to inspect h_nr_runnable post its update in
+dequeue_entities() like below:
+
+    cfs_rq->h_nr_runnable -= h_nr_runnable;
+    SCHED_WARN_ON(((int) cfs_rq->h_nr_runnable) < 0);
+
+is consistently tripped when running wakeup intensive workloads like
+hackbench in a cgroup.
+
+This error is self correcting since cfs_rq are per-cpu and cannot
+migrate. The entitiy is either picked for full dequeue or is requeued
+when a task wakes up below it. Both those paths call clear_delayed()
+which again increments h_nr_runnable of the hierarchy without
+considering if the entity corresponds to a task or not.
+
+h_nr_runnable will eventually reflect the correct value however in the
+interim, the incorrect values can still influence PELT calculation which
+uses se->runnable_weight or cfs_rq->h_nr_runnable.
+
+Since only delayed tasks take the early return path in
+dequeue_entities() and enqueue_task_fair(), adjust the
+h_nr_runnable in {set,clear}_delayed() only when a task is delayed as
+this path skips the h_nr_* update loops and returns early.
+
+For entities corresponding to cfs_rq, the h_nr_* update loop in the
+caller will do the right thing.
+
+Fixes: 76f2f783294d ("sched/eevdf: More PELT vs DELAYED_DEQUEUE")
+Signed-off-by: K Prateek Nayak <kprateek.nayak@amd.com>
+Signed-off-by: Peter Zijlstra (Intel) <peterz@infradead.org>
+Reviewed-by: Gautham R. Shenoy <gautham.shenoy@amd.com>
+Tested-by: Swapnil Sapkal <swapnil.sapkal@amd.com>
+Link: https://lkml.kernel.org/r/20250117105852.23908-1-kprateek.nayak@amd.com
+---
+ kernel/sched/fair.c | 19 +++++++++++++++++++
+ 1 file changed, 19 insertions(+)
+
+diff --git a/kernel/sched/fair.c b/kernel/sched/fair.c
+index 2695843..f4e4d3e 100644
+--- a/kernel/sched/fair.c
++++ b/kernel/sched/fair.c
+@@ -5372,6 +5372,15 @@ static __always_inline void return_cfs_rq_runtime(struct cfs_rq *cfs_rq);
+ static void set_delayed(struct sched_entity *se)
+ {
+ 	se->sched_delayed = 1;
++
++	/*
++	 * Delayed se of cfs_rq have no tasks queued on them.
++	 * Do not adjust h_nr_runnable since dequeue_entities()
++	 * will account it for blocked tasks.
++	 */
++	if (!entity_is_task(se))
++		return;
++
+ 	for_each_sched_entity(se) {
+ 		struct cfs_rq *cfs_rq = cfs_rq_of(se);
+ 
+@@ -5384,6 +5393,16 @@ static void set_delayed(struct sched_entity *se)
+ static void clear_delayed(struct sched_entity *se)
+ {
+ 	se->sched_delayed = 0;
++
++	/*
++	 * Delayed se of cfs_rq have no tasks queued on them.
++	 * Do not adjust h_nr_runnable since a dequeue has
++	 * already accounted for it or an enqueue of a task
++	 * below it will account for it in enqueue_task_fair().
++	 */
++	if (!entity_is_task(se))
++		return;
++
+ 	for_each_sched_entity(se) {
+ 		struct cfs_rq *cfs_rq = cfs_rq_of(se);
+ 
+-- 
+2.47.0
+
+x86: use cmov for user address masking
+https://git.kernel.org/pub/scm/linux/kernel/git/tip/tip.git/commit/?id=91309a70829d94c735c8bb1cc383e78c96127a16
+
+From 91309a70829d94c735c8bb1cc383e78c96127a16 Mon Sep 17 00:00:00 2001
+From: Linus Torvalds <torvalds@linux-foundation.org>
+Date: Tue, 10 Dec 2024 10:25:04 -0800
+Subject: x86: use cmov for user address masking
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+This was a suggestion by David Laight, and while I was slightly worried
+that some micro-architecture would predict cmov like a conditional
+branch, there is little reason to actually believe any core would be
+that broken.
+
+Intel documents that their existing cores treat CMOVcc as a data
+dependency that will constrain speculation in their "Speculative
+Execution Side Channel Mitigations" whitepaper:
+
+  "Other instructions such as CMOVcc, AND, ADC, SBB and SETcc can also
+   be used to prevent bounds check bypass by constraining speculative
+   execution on current family 6 processors (Intel® Core™, Intel® Atom™,
+   Intel® Xeon® and Intel® Xeon Phi™ processors)"
+
+and while that leaves the future uarch issues open, that's certainly
+true of our traditional SBB usage too.
+
+Any core that predicts CMOV will be unusable for various crypto
+algorithms that need data-independent timing stability, so let's just
+treat CMOV as the safe choice that simplifies the address masking by
+avoiding an extra instruction and doesn't need a temporary register.
+
+Suggested-by: David Laight <David.Laight@aculab.com>
+Link: https://www.intel.com/content/dam/develop/external/us/en/documents/336996-speculative-execution-side-channel-mitigations.pdf
+Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+---
+ arch/x86/include/asm/uaccess_64.h | 12 ++++++------
+ arch/x86/lib/getuser.S            |  5 ++---
+ 2 files changed, 8 insertions(+), 9 deletions(-)
+
+diff --git a/arch/x86/include/asm/uaccess_64.h b/arch/x86/include/asm/uaccess_64.h
+index b0a887209400de..c52f0133425b94 100644
+--- a/arch/x86/include/asm/uaccess_64.h
++++ b/arch/x86/include/asm/uaccess_64.h
+@@ -63,13 +63,13 @@ static inline unsigned long __untagged_addr_remote(struct mm_struct *mm,
+  */
+ static inline void __user *mask_user_address(const void __user *ptr)
+ {
+-	unsigned long mask;
++	void __user *ret;
+ 	asm("cmp %1,%0\n\t"
+-	    "sbb %0,%0"
+-		:"=r" (mask)
+-		:"r" (ptr),
+-		 "0" (runtime_const_ptr(USER_PTR_MAX)));
+-	return (__force void __user *)(mask | (__force unsigned long)ptr);
++	    "cmova %1,%0"
++		:"=r" (ret)
++		:"r" (runtime_const_ptr(USER_PTR_MAX)),
++		 "0" (ptr));
++	return ret;
+ }
+ #define masked_user_access_begin(x) ({				\
+ 	__auto_type __masked_ptr = (x);				\
+diff --git a/arch/x86/lib/getuser.S b/arch/x86/lib/getuser.S
+index 4357ec2a0bfc2c..89ecd57c9d4234 100644
+--- a/arch/x86/lib/getuser.S
++++ b/arch/x86/lib/getuser.S
+@@ -44,9 +44,8 @@
+   .pushsection runtime_ptr_USER_PTR_MAX,"a"
+ 	.long 1b - 8 - .
+   .popsection
+-	cmp %rax, %rdx
+-	sbb %rdx, %rdx
+-	or %rdx, %rax
++	cmp %rdx, %rax
++	cmova %rdx, %rax
+ .else
+ 	cmp $TASK_SIZE_MAX-\size+1, %eax
+ 	jae .Lbad_get_user
+-- 
+cgit 1.2.3-korg
 
 sched_ext: Always call put_prev_task() with scx_enabled
 https://lore.kernel.org/lkml/20241013173928.20738-1-andrea.righi@linux.dev/T/#u
