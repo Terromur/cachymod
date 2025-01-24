@@ -1,0 +1,83 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Nicolas Iooss <nicolas.iooss_linux@m4x.org>
+Date: Sun, 27 Dec 2020 21:50:18 +0100
+Subject: [PATCH] {For LLVMLinux} mm/remap: replace BUILD_BUG with BUG for
+ clang
+
+clang on x86_64 fails to link because:
+
+    ld: mm/mremap.o: in function `get_extent':
+    mremap.c:(.text+0xab9): undefined reference to `__compiletime_assert_1280'
+
+get_extent() is not constant-inlined enough, when using clang.
+---
+ mm/mremap.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/mm/mremap.c b/mm/mremap.c
+index 11e06e4ab33b..df97e8f4ae23 100644
+--- a/mm/mremap.c
++++ b/mm/mremap.c
+@@ -429,7 +429,7 @@ static __always_inline unsigned long get_extent(enum pgt_entry entry,
+ 		size = PUD_SIZE;
+ 		break;
+ 	default:
+-		BUILD_BUG();
++		BUG();/* BUILD_BUG();  clang does not optimize enough */
+ 		break;
+ 	}
+ 
+-- 
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Nicolas Iooss <nicolas.iooss_linux@m4x.org>
+Date: Fri, 2 Jul 2021 21:06:06 +0200
+Subject: [PATCH] {PRINTF} mm/slub: constify the format arg of slab_fix
+
+---
+ mm/slub.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/mm/slub.c b/mm/slub.c
+index 93098fa9bf8d..7a4bb2bcfd60 100644
+--- a/mm/slub.c
++++ b/mm/slub.c
+@@ -918,7 +918,7 @@ static void slab_bug(struct kmem_cache *s, char *fmt, ...)
+ }
+ 
+ __printf(2, 3)
+-static void slab_fix(struct kmem_cache *s, char *fmt, ...)
++static void slab_fix(struct kmem_cache *s, const char *fmt, ...)
+ {
+ 	struct va_format vaf;
+ 	va_list args;
+@@ -1048,7 +1048,7 @@ static void init_object(struct kmem_cache *s, void *object, u8 val)
+ static void restore_bytes(struct kmem_cache *s, char *message, u8 data,
+ 						void *from, void *to)
+ {
+-	slab_fix(s, "Restoring %s 0x%p-0x%p=0x%x", message, from, to - 1, data);
++	slab_fix(s, "Restoring %s 0x %p-0x %p=0x%x", message, from, to - 1, data);
+ 	memset(from, data, to - from);
+ }
+ 
+-- 
+
+Signed-off-by: Colin Ian King <colin.king@intel.com>
+---
+ drivers/acpi/osl.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/acpi/osl.c b/drivers/acpi/osl.c
+index 70af3fbbebe5..dab3d5089635 100644
+--- a/drivers/acpi/osl.c
++++ b/drivers/acpi/osl.c
+@@ -1549,7 +1549,7 @@ void acpi_os_release_lock(acpi_spinlock lockp, acpi_cpu_flags not_used)
+ acpi_status
+ acpi_os_create_cache(char *name, u16 size, u16 depth, acpi_cache_t **cache)
+ {
+-	*cache = kmem_cache_create(name, size, 0, 0, NULL);
++	*cache = kmem_cache_create(name, size, 0, SLAB_HWCACHE_ALIGN, NULL);
+ 	if (*cache == NULL)
+ 		return AE_ERROR;
+ 	else
+-- 
+2.45.2
