@@ -1,13 +1,3 @@
-
-Massive performance regression in Dota 2 (maybe others) on Linux 6.10.2
-compared to Linux-LTS 6.6.42
-https://gitlab.freedesktop.org/drm/amd/-/issues/3528#note_2533271
-
-Verified by @Terromur
-
-A problem that is still relevant today.
-
-
 From 56de86227c5d8c93ce736da920962ac84b9dd2de Mon Sep 17 00:00:00 2001
 From: Alex Deucher <alexander.deucher@amd.com>
 Date: Tue, 26 Mar 2024 11:28:29 -0400
