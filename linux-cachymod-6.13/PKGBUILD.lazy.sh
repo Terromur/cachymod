@@ -108,7 +108,7 @@ export _buildtype="polly"
 #export _extra_patch_or_url4="1040-intel-idle.patch"
 #export _extra_patch_or_url5="1050-cpuidle-Prefer-teo.patch"
 #export _extra_patch_or_url6="1060-misc-fixes.patch"
-#export _extra_patch_or_url7=""
+#export _extra_patch_or_url7="1070-optimise-ldflags.patch"
 #export _extra_patch_or_url8=""
 #export _extra_patch_or_url9=""
 
