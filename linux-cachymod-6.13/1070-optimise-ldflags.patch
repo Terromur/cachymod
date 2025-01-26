@@ -4,7 +4,7 @@ diff --git a/Makefile b/Makefile
  			 -O2 -fomit-frame-pointer -std=gnu17
  KBUILD_USERCFLAGS  := $(KBUILD_USERHOSTCFLAGS) $(USERCFLAGS)
 -KBUILD_USERLDFLAGS := $(USERLDFLAGS)
-+KBUILD_USERLDFLAGS := -Wl,--gc-sections -Wl,--as-needed -Wl,-z,common -Wl,-O3 -Wl,--icf=safe -Wl,-z,now -Wl,--relax -Wl,--exclude-libs,ALL -Wl,--strip-debug $(USERLDFLAGS)
++KBUILD_USERLDFLAGS := -Wl,-O3 -Wl,--icf=all -flto=auto -fwhole-program-vtables -fuse-ld=lld -lpthread $(USERLDFLAGS)
  
  # These flags apply to all Rust code in the tree, including the kernel and
  # host programs.
@@ -13,7 +13,7 @@ diff --git a/Makefile b/Makefile
  RUSTFLAGS_KERNEL =
  AFLAGS_KERNEL	=
 -LDFLAGS_vmlinux =
-+LDFLAGS_vmlinux = -Wl,--gc-sections -Wl,--as-needed -Wl,-z,common -Wl,-O3 -Wl,--icf=safe -Wl,-z,now -Wl,--relax -Wl,--exclude-libs,ALL -Wl,--strip-debug
++LDFLAGS_vmlinux = -Wl,-O3 -Wl,--icf=all -flto=auto -fwhole-program-vtables -fuse-ld=lld -lpthread
  
  # Use USERINCLUDE when you must reference the UAPI directories only.
  USERINCLUDE    := \
